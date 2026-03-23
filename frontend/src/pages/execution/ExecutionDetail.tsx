@@ -12,6 +12,7 @@ import {
 import { ArrowLeftOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import type { CronExecution, ExecutionStatus } from '../../types/cronexecution';
 import type { CronExecutionLog } from '../../types/cronexecutionlog';
 import { getExecutionDetail } from '../../api/cronexecution';
@@ -198,7 +199,7 @@ const ExecutionDetail: React.FC = () => {
                       </Button>
                     </div>
                     <div className="chat-message-content">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{log.message}</ReactMarkdown>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{log.message}</ReactMarkdown>
                     </div>
                   </div>
                 );

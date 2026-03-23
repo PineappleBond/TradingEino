@@ -2,10 +2,11 @@ package rest
 
 import (
 	"encoding/json"
+	"net/http"
+
 	"github.com/PineappleBond/TradingEino/backend/pkg/okex"
 	requests "github.com/PineappleBond/TradingEino/backend/pkg/okex/requests/rest/public"
 	responses "github.com/PineappleBond/TradingEino/backend/pkg/okex/responses/public_data"
-	"net/http"
 )
 
 // PublicData
@@ -26,6 +27,23 @@ func NewPublicData(c *ClientRest) *PublicData {
 // https://www.okex.com/docs-v5/en/#rest-api-public-data-get-instruments
 func (c *PublicData) GetInstruments(req requests.GetInstruments) (response responses.GetInstruments, err error) {
 	p := "/api/v5/public/instruments"
+	m := okex.S2M(req)
+	res, err := c.client.Do(http.MethodGet, p, false, m)
+	if err != nil {
+		return
+	}
+	defer res.Body.Close()
+	d := json.NewDecoder(res.Body)
+	err = d.Decode(&response)
+	return
+}
+
+// GetFundingRate
+// 获取当前资金费率
+//
+// https://www.okx.com/docs-v5/zh/#public-data-rest-api-get-funding-rate
+func (c *PublicData) GetFundingRate(req requests.GetFundingRate) (response responses.GetFundingRate, err error) {
+	p := "/api/v5/public/funding-rate"
 	m := okex.S2M(req)
 	res, err := c.client.Do(http.MethodGet, p, false, m)
 	if err != nil {

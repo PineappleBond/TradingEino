@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -78,14 +77,14 @@ func (c *OkxCandlesticksTool) InvokableRun(ctx context.Context, argumentsInJSON 
 	var request Request
 	err := json.Unmarshal([]byte(argumentsInJSON), &request)
 	if err != nil {
-		return err.Error(), err
+		return err.Error(), nil
 	}
 	candlesticks, err := c.GetCandlesticks(ctx, request.Symbol, okex.BarSize(request.Bar), nil, request.Limit+300)
 	if err != nil {
-		return err.Error(), err
+		return err.Error(), nil
 	}
 	if len(candlesticks) <= 300 {
-		return "获取K线数据失败", errors.New("获取K线数据失败")
+		return "获取K线数据失败", nil
 	}
 	// 获取指标
 	indicatorCalculator := NewIndicatorCalculator(candlesticks)
@@ -95,7 +94,7 @@ func (c *OkxCandlesticksTool) InvokableRun(ctx context.Context, argumentsInJSON 
 		rows = append(rows, technicalIndicator.Row())
 	}
 	if len(rows) == 0 {
-		return "获取K线数据失败", errors.New("获取K线数据失败")
+		return "获取K线数据失败", nil
 	}
 	output := ""
 	table := xmd.CreateMarkdownTable(TechnicalIndicatorsHeaders, rows)

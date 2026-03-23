@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -47,7 +46,7 @@ func (c *OkxGetPositionsTool) InvokableRun(ctx context.Context, argumentsInJSON 
 	var request Request
 	err := json.Unmarshal([]byte(argumentsInJSON), &request)
 	if err != nil {
-		return err.Error(), err
+		return err.Error(), nil
 	}
 	leverage := 1
 	if request.Leverage != nil {
@@ -64,10 +63,10 @@ func (c *OkxGetPositionsTool) InvokableRun(ctx context.Context, argumentsInJSON 
 			InstType: "",
 		})
 		if err != nil {
-			return err.Error(), err
+			return err.Error(), nil
 		}
 		if getPositions.Code != 0 {
-			return getPositions.Msg, errors.New(getPositions.Msg)
+			return getPositions.Msg, nil
 		}
 		availablePositions := make([]*account.Position, 0)
 		for _, position := range getPositions.Positions {
@@ -114,14 +113,14 @@ func (c *OkxGetPositionsTool) InvokableRun(ctx context.Context, argumentsInJSON 
 			TdMode:   "cross",
 		})
 		if err != nil {
-			return err.Error(), err
+			return err.Error(), nil
 		}
 		if getMaxTradeAmount.Code != 0 {
-			return getMaxTradeAmount.Msg, fmt.Errorf("获取可用资金失败：%v", getMaxTradeAmount.Msg)
+			return getMaxTradeAmount.Msg, nil
 		}
 		if len(getMaxTradeAmount.MaxBuySellAmounts) != 1 {
 			errMsg := fmt.Sprintf("get max available trade amount amounts: %d", len(getMaxTradeAmount.MaxBuySellAmounts))
-			return errMsg, errors.New(errMsg)
+			return errMsg, nil
 		}
 		output += "```markdown\n| 最大可买 | 最大可卖 |\n"
 		output += "| :----- | :------ |\n"

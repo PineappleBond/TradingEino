@@ -6,6 +6,7 @@ import (
 
 	"github.com/PineappleBond/TradingEino/backend/internal/agent/okx_watcher"
 	"github.com/PineappleBond/TradingEino/backend/internal/agent/risk_officer"
+	"github.com/PineappleBond/TradingEino/backend/internal/agent/sentiment_analyst"
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
 	"github.com/cloudwego/eino/adk"
 )
@@ -32,7 +33,12 @@ func InitAgents(svcCtx *svc.ServiceContext) error {
 		cancel()
 		return err
 	}
-	subAgents = append(subAgents, risk_officer.RiskOfficer())
+	err = sentiment_analyst.Init(ctx, svcCtx)
+	if err != nil {
+		cancel()
+		return err
+	}
+	subAgents = append(subAgents, risk_officer.RiskOfficer(), sentiment_analyst.SentimentAnalyst())
 	err = okx_watcher.Init(ctx, svcCtx, subAgents...)
 	if err != nil {
 		cancel()

@@ -51,6 +51,7 @@ type (
 		NextFundingRate okex.JSONFloat64    `json:"NextFundingRate"`
 		FundingTime     okex.JSONTime       `json:"fundingTime"`
 		NextFundingTime okex.JSONTime       `json:"nextFundingTime"`
+		Premium         string              `json:"premium"`
 	}
 	LimitPrice struct {
 		InstID   string              `json:"instId"`
