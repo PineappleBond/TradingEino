@@ -89,6 +89,8 @@ func setUpWeb(r *gin.Engine) {
 					c.Header("Content-Type", "application/javascript")
 				} else if strings.HasSuffix(path, ".css") {
 					c.Header("Content-Type", "text/css")
+				} else if strings.HasSuffix(path, ".svg") {
+					c.Header("Content-Type", "image/svg+xml")
 				}
 				c.Data(http.StatusOK, "", data)
 				return

@@ -17,8 +17,6 @@ import {
   EyeOutlined,
   EditOutlined,
   DeleteOutlined,
-  PlayCircleOutlined,
-  StopOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
 } from '@ant-design/icons';
@@ -29,7 +27,6 @@ import {
   deleteTask,
   enableTask,
   disableTask,
-  stopTask,
 } from '../../api/crontask';
 import dayjs from 'dayjs';
 
@@ -130,14 +127,6 @@ const TaskList: React.FC = () => {
     } catch (error) {
       console.error('操作失败:', error);
     }
-  };
-
-  /**
-   * 启动任务
-   */
-  const handleStart = (id: number) => {
-    // 打开启动任务对话框 - 这里简化处理，直接跳转到详情页进行启动操作
-    navigate(`/task/${id}`);
   };
 
   /**

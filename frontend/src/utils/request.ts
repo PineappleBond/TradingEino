@@ -1,4 +1,4 @@
-import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
+import axios, { type AxiosInstance } from 'axios';
 import { message } from 'antd';
 
 /**
@@ -54,7 +54,7 @@ request.interceptors.request.use(
  * 响应拦截器
  */
 request.interceptors.response.use(
-  (response: AxiosResponse<ApiResponse>) => {
+  (response) => {
     const res = response.data;
 
     // 如果响应码不为 0（成功），显示错误消息
@@ -63,8 +63,8 @@ request.interceptors.response.use(
       return Promise.reject(new Error(res.message || '请求失败'));
     }
 
-    // 返回 response.data 而不是整个 response 对象
-    return res;
+    // 返回完整的 response 对象，保持类型一致
+    return response;
   },
   (error) => {
     // HTTP 错误处理
@@ -109,28 +109,28 @@ request.interceptors.response.use(
  * 封装 GET 请求
  */
 export function get<T = any>(url: string, params?: any): Promise<ApiResponse<T>> {
-  return request.get(url, { params });
+  return request.get(url, { params }).then((response) => response.data as unknown as ApiResponse<T>);
 }
 
 /**
  * 封装 POST 请求
  */
 export function post<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
-  return request.post(url, data);
+  return request.post(url, data).then((response) => response.data as unknown as ApiResponse<T>);
 }
 
 /**
  * 封装 PUT 请求
  */
 export function put<T = any>(url: string, data?: any): Promise<ApiResponse<T>> {
-  return request.put(url, data);
+  return request.put(url, data).then((response) => response.data as unknown as ApiResponse<T>);
 }
 
 /**
  * 封装 DELETE 请求
  */
 export function del<T = any>(url: string): Promise<ApiResponse<T>> {
-  return request.delete(url);
+  return request.delete(url).then((response) => response.data as unknown as ApiResponse<T>);
 }
 
 export default request;

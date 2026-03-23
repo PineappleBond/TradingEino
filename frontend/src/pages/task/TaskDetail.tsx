@@ -15,8 +15,6 @@ import {
 import {
   ArrowLeftOutlined,
   EditOutlined,
-  PlayCircleOutlined,
-  StopOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
 } from '@ant-design/icons';
@@ -33,7 +31,7 @@ const TaskDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [task, setTask] = useState<CronTask | null>(null);
-  const [startModalOpen] = useState(false);
+  const [startModalOpen, setStartModalOpen] = useState(false);
   const [startForm] = Form.useForm();
 
   /**

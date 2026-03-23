@@ -68,12 +68,11 @@ export const cyberpunkTheme: ThemeConfig = {
     Table: {
       headerBg: '#252535',
       headerColor: '#bf00ff',
-      bodyBg: '#252535',
-      rowHoverBg: 'rgba(191, 0, 255, 0.08)',
       borderColor: '#454555',
       colorText: '#ffffff',
       colorTextSecondary: '#c0c0c0',
       colorFillContent: '#252535',
+      rowHoverBg: 'rgba(191, 0, 255, 0.08)',
     },
     Input: {
       activeBorderColor: '#bf00ff',
@@ -83,24 +82,21 @@ export const cyberpunkTheme: ThemeConfig = {
       hoverBg: '#252535',
       colorText: '#ffffff',
       colorTextDisabled: '#808080',
-      placeholderColor: '#808080',
       colorBgContainer: '#252535',
     },
     Select: {
       selectorBg: '#252535',
-      dropdownBg: '#303045',
-      dropdownColor: '#ffffff',
+      optionActiveBg: '#303045',
       colorText: '#ffffff',
       colorTextSecondary: '#c0c0c0',
       colorTextDisabled: '#808080',
-      colorBgListItem: '#303045',
-      colorBgListItemHover: 'rgba(191, 0, 255, 0.08)',
-      colorBgItemSelected: 'rgba(191, 0, 255, 0.15)',
+      optionSelectedBg: 'rgba(191, 0, 255, 0.15)',
+      optionSelectedColor: '#ffffff',
       colorBorder: '#454555',
       colorBorderSecondary: '#454555',
     },
     Dropdown: {
-      dropdownBg: '#303045',
+      colorBgContainer: '#303045',
       colorText: '#ffffff',
     },
     Modal: {
@@ -110,7 +106,7 @@ export const cyberpunkTheme: ThemeConfig = {
       colorTextSecondary: '#c0c0c0',
     },
     Card: {
-      bg: '#252535',
+      colorBgContainer: '#252535',
       colorText: '#ffffff',
       colorTextSecondary: '#c0c0c0',
     },
@@ -128,7 +124,7 @@ export const cyberpunkTheme: ThemeConfig = {
       itemInputBg: '#252535',
     },
     Radio: {
-      colorWrapperText: '#ffffff',
+      colorText: '#ffffff',
     },
     Checkbox: {
       colorText: '#ffffff',
@@ -138,7 +134,7 @@ export const cyberpunkTheme: ThemeConfig = {
       colorText: '#ffffff',
     },
     Tree: {
-      dirTreeBg: '#252535',
+      colorBgContainer: '#252535',
     },
   },
 };
