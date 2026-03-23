@@ -51,3 +51,6 @@ backend/data
 # logs
 backend/logs
 /logs
+
+# Frontend build artifacts
+backend/web/dist
