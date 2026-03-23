@@ -246,11 +246,21 @@ a:hover {
   padding-right: 8px;
 }
 
+/* 消息整体包裹（头像 + 气泡） */
+.chat-message-wrapper {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 90px;
+  align-items: flex-start;
+  max-width: 92%;
+}
+
+/* 聊天气泡 */
 .chat-message {
-  padding: 8px 16px 12px 16px;
+  flex: 1;
+  padding: 12px 16px;
   border-radius: 12px;
   transition: all 0.2s ease;
-  margin-bottom: 90px;
   min-height: 50px;
   /* 气泡样式 - 统一背景 */
   background: rgba(191, 0, 255, 0.08);
@@ -258,7 +268,6 @@ a:hover {
   /* 左侧圆角更明显，模拟气泡尾巴 */
   border-bottom-left-radius: 4px;
   position: relative;
-  max-width: 92%;
 }
 
 .chat-message:hover {
@@ -283,15 +292,7 @@ a:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-/* 消息体布局 */
-.chat-message-body {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-}
-
 .chat-message-content-wrapper {
-  flex: 1;
   min-width: 0;
 }
 

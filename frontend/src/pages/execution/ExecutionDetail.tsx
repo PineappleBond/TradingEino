@@ -199,22 +199,22 @@ const ExecutionDetail: React.FC = () => {
                 <div
                   key={log.id}
                   id={`log-${log.id}`}
-                  className="chat-message"
+                  className="chat-message-wrapper"
                 >
-                  <div className="chat-message-actions">
-                    <button className="chat-action-btn" onClick={() => handleCopyText(log.message)}>
-                      <CopyOutlined /> 复制原文
-                    </button>
-                    <button className="chat-action-btn" onClick={() => handleCopyImage(log.id)}>
-                      <PicCenterOutlined /> 截图
-                    </button>
+                  <div
+                    className="chat-avatar"
+                    style={{ background: getAvatarColor(log.from) }}
+                  >
+                    {log.from.charAt(0).toUpperCase()}
                   </div>
-                  <div className="chat-message-body">
-                    <div
-                      className="chat-avatar"
-                      style={{ background: getAvatarColor(log.from) }}
-                    >
-                      {log.from.charAt(0).toUpperCase()}
+                  <div className="chat-message">
+                    <div className="chat-message-actions">
+                      <button className="chat-action-btn" onClick={() => handleCopyText(log.message)}>
+                        <CopyOutlined /> 复制原文
+                      </button>
+                      <button className="chat-action-btn" onClick={() => handleCopyImage(log.id)}>
+                        <PicCenterOutlined /> 截图
+                      </button>
                     </div>
                     <div className="chat-message-content-wrapper">
                       <div className="chat-message-header">
