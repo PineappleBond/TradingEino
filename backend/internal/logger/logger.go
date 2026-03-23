@@ -219,7 +219,6 @@ func (l *Logger) WithGroup(name string) *Logger {
 // Global default logger
 var defaultLogger = New(config.LoggerConfig{
 	Level:     "info",
-	Format:    "json",
 	Output:    "stdout",
 	AddSource: true,
 }, 4)

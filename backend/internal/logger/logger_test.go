@@ -16,7 +16,6 @@ import (
 func TestNew(t *testing.T) {
 	cfg := config.LoggerConfig{
 		Level:     "debug",
-		Format:    "json",
 		Output:    "stdout",
 		AddSource: true,
 	}
@@ -59,7 +58,6 @@ func TestLogger_Debug(t *testing.T) {
 	var buf bytes.Buffer
 	cfg := config.LoggerConfig{
 		Level:     "debug",
-		Format:    "json",
 		Output:    "stdout",
 		AddSource: false,
 	}
@@ -82,7 +80,6 @@ func TestLogger_Info(t *testing.T) {
 	var buf bytes.Buffer
 	cfg := config.LoggerConfig{
 		Level:     "info",
-		Format:    "json",
 		Output:    "stdout",
 		AddSource: false,
 	}
@@ -105,7 +102,6 @@ func TestLogger_Warn(t *testing.T) {
 	var buf bytes.Buffer
 	cfg := config.LoggerConfig{
 		Level:     "warn",
-		Format:    "json",
 		Output:    "stdout",
 		AddSource: false,
 	}
@@ -128,7 +124,6 @@ func TestLogger_Error_WithStackTrace(t *testing.T) {
 	var buf bytes.Buffer
 	cfg := config.LoggerConfig{
 		Level:     "error",
-		Format:    "json",
 		Output:    "stdout",
 		AddSource: false,
 	}
@@ -171,7 +166,6 @@ func TestLogger_Errorf(t *testing.T) {
 	var buf bytes.Buffer
 	cfg := config.LoggerConfig{
 		Level:     "error",
-		Format:    "json",
 		Output:    "stdout",
 		AddSource: false,
 	}
@@ -201,7 +195,6 @@ func TestLogger_With(t *testing.T) {
 	var buf bytes.Buffer
 	cfg := config.LoggerConfig{
 		Level:     "debug",
-		Format:    "json",
 		Output:    "stdout",
 		AddSource: false,
 	}
@@ -233,7 +226,6 @@ func TestLogger_LevelFiltering(t *testing.T) {
 	var buf bytes.Buffer
 	cfg := config.LoggerConfig{
 		Level:     "warn",
-		Format:    "json",
 		Output:    "stdout",
 		AddSource: false,
 	}
@@ -301,7 +293,6 @@ func TestGetStackTrace(t *testing.T) {
 func TestNew_WithStderr(t *testing.T) {
 	cfg := config.LoggerConfig{
 		Level:     "debug",
-		Format:    "json",
 		Output:    "stderr",
 		AddSource: false,
 	}
@@ -316,7 +307,6 @@ func TestNew_WithFile(t *testing.T) {
 	tmpFile := t.TempDir() + "/test.log"
 	cfg := config.LoggerConfig{
 		Level:     "debug",
-		Format:    "json",
 		Output:    "file",
 		FilePath:  tmpFile,
 		AddSource: false,
@@ -336,7 +326,6 @@ func TestNew_WithFile(t *testing.T) {
 func TestNew_WithInvalidFilePath(t *testing.T) {
 	cfg := config.LoggerConfig{
 		Level:     "debug",
-		Format:    "json",
 		Output:    "file",
 		FilePath:  "/nonexistent/directory/test.log",
 		AddSource: false,
@@ -356,7 +345,6 @@ func TestWithGroup(t *testing.T) {
 	var buf bytes.Buffer
 	cfg := config.LoggerConfig{
 		Level:     "debug",
-		Format:    "json",
 		Output:    "stdout",
 		AddSource: false,
 	}
@@ -386,7 +374,6 @@ func TestLogger_OutputToWriter(t *testing.T) {
 	var buf bytes.Buffer
 	cfg := config.LoggerConfig{
 		Level:     "debug",
-		Format:    "json",
 		Output:    "stdout",
 		AddSource: false,
 	}

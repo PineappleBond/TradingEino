@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -13,9 +14,6 @@ type LoggerConfig struct {
 	// Level is the minimum log level to display
 	// One of: debug, info, warn, error
 	Level string `mapstructure:"level"`
-	// Format is the log output format
-	// One of: json, text
-	Format string `mapstructure:"format"`
 	// Output is the log output destination
 	// One of: stdout, stderr, file
 	Output string `mapstructure:"output"`
@@ -42,7 +40,6 @@ func DefaultConfig() *Config {
 	return &Config{
 		Logger: LoggerConfig{
 			Level:     "info",
-			Format:    "json",
 			Output:    "stdout",
 			AddSource: true,
 		},
@@ -101,4 +98,12 @@ func Load(configPath string) (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+func (c LoggerConfig) DBLogPath() string {
+	filePath := c.FilePath
+	dir := filepath.Dir(filePath)
+	ext := filepath.Ext(filePath)
+	dbLogFile := filepath.Join(dir, "gorm.log"+ext)
+	return dbLogFile
 }
