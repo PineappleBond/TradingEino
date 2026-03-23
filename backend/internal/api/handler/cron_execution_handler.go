@@ -2,10 +2,9 @@ package handler
 
 import (
 	"net/http"
-	"time"
 
+	"github.com/PineappleBond/TradingEino/backend/internal/api/request"
 	"github.com/PineappleBond/TradingEino/backend/internal/api/response"
-	"github.com/PineappleBond/TradingEino/backend/internal/model"
 	"github.com/PineappleBond/TradingEino/backend/internal/repository"
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
 	"github.com/gin-gonic/gin"
@@ -23,16 +22,6 @@ func NewCronExecutionHandler(svcCtx *svc.ServiceContext) *CronExecutionHandler {
 	}
 }
 
-// ListExecutionsRequest 获取执行记录列表请求
-type ListExecutionsRequest struct {
-	Page      int                      `form:"page"`
-	PageSize  int                      `form:"pageSize"`
-	TaskID    *uint                    `form:"task_id"`
-	Status    *model.ExecutionStatus   `form:"status"`
-	StartTime *time.Time               `form:"start_time"`
-	EndTime   *time.Time               `form:"end_time"`
-}
-
 // ListExecutions 分页获取执行记录列表
 // @Summary 分页获取定时任务执行记录列表
 // @Tags cronexecution
@@ -44,10 +33,10 @@ type ListExecutionsRequest struct {
 // @Param status query string false "状态 (pending/running/success/failed/retried/cancelled)"
 // @Param start_time query string false "开始时间 (2006-01-02T15:04:05Z07:00)"
 // @Param end_time query string false "结束时间 (2006-01-02T15:04:05Z07:00)"
-// @Success 200 {object} response.Response[response.PagedData[model.CronExecution]]
+// @Success 200 {object} response.Response[response.PagedData[response.CronExecutionResponse]]
 // @Router /api/cronexecution [get]
 func (h *CronExecutionHandler) ListExecutions(ctx *gin.Context) {
-	var req ListExecutionsRequest
+	var req request.ListExecutionsRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.Error[any](response.CodeParameterFormatError, err.Error()))
 		return
@@ -74,8 +63,8 @@ func (h *CronExecutionHandler) ListExecutions(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.Success(response.PagedData[*model.CronExecution]{
-		Items: executions,
+	ctx.JSON(http.StatusOK, response.Success(response.PagedData[*response.CronExecutionResponse]{
+		Items: response.ToCronExecutionListResponse(executions),
 		Page: response.PageInfo{
 			Page:     req.Page,
 			PageSize: req.PageSize,
@@ -84,23 +73,18 @@ func (h *CronExecutionHandler) ListExecutions(ctx *gin.Context) {
 	}))
 }
 
-// GetExecutionRequest 获取执行记录详情请求
-type GetExecutionRequest struct {
-	ID uint `uri:"id" binding:"required,min=1"`
-}
-
 // GetExecution 获取执行记录详情
 // @Summary 获取定时任务执行记录详情
 // @Tags cronexecution
 // @Accept json
 // @Produce json
 // @Param id path int true "执行记录 ID"
-// @Success 200 {object} response.Response[model.CronExecution]
+// @Success 200 {object} response.Response[response.CronExecutionResponse]
 // @Failure 400 {object} response.Response[any]
 // @Failure 404 {object} response.Response[any]
 // @Router /api/cronexecution/{id} [get]
 func (h *CronExecutionHandler) GetExecution(ctx *gin.Context) {
-	var req GetExecutionRequest
+	var req request.GetExecutionRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.Error[any](response.CodeParameterFormatError, err.Error()))
 		return
@@ -112,14 +96,7 @@ func (h *CronExecutionHandler) GetExecution(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.Success(execution))
-}
-
-// GetByTaskIDRequest 获取任务执行记录列表请求
-type GetByTaskIDRequest struct {
-	TaskID uint `uri:"task_id" binding:"required,min=1"`
-	Page   int  `form:"page"`
-	PageSize int `form:"pageSize"`
+	ctx.JSON(http.StatusOK, response.Success(response.ToCronExecutionResponse(execution)))
 }
 
 // GetByTaskID 分页获取指定任务的所有执行记录
@@ -130,11 +107,11 @@ type GetByTaskIDRequest struct {
 // @Param task_id path int true "任务 ID"
 // @Param page query int false "页码 (默认 1)"
 // @Param pageSize query int false "每页数量 (默认 10)"
-// @Success 200 {object} response.Response[response.PagedData[model.CronExecution]]
+// @Success 200 {object} response.Response[response.PagedData[response.CronExecutionResponse]]
 // @Failure 400 {object} response.Response[any]
 // @Router /api/cronexecution/task/{task_id} [get]
 func (h *CronExecutionHandler) GetByTaskID(ctx *gin.Context) {
-	var req GetByTaskIDRequest
+	var req request.GetByTaskIDRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.Error[any](response.CodeParameterFormatError, err.Error()))
 		return
@@ -165,8 +142,8 @@ func (h *CronExecutionHandler) GetByTaskID(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.Success(response.PagedData[*model.CronExecution]{
-		Items: executions,
+	ctx.JSON(http.StatusOK, response.Success(response.PagedData[*response.CronExecutionResponse]{
+		Items: response.ToCronExecutionListResponse(executions),
 		Page: response.PageInfo{
 			Page:     req.Page,
 			PageSize: req.PageSize,

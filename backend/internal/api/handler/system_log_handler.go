@@ -11,28 +11,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PineappleBond/TradingEino/backend/internal/api/request"
 	"github.com/PineappleBond/TradingEino/backend/internal/api/response"
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
 	"github.com/gin-gonic/gin"
 )
-
-// LogEntry represents a parsed JSON log entry
-type LogEntry struct {
-	Time    time.Time `json:"time"`
-	Level   string    `json:"level"`
-	Message string    `json:"msg"`
-	Raw     string    `json:"-"` // Original line
-}
-
-// LogFileInfo represents information about a log file
-type LogFileInfo struct {
-	Filename    string    `json:"filename"`
-	Size        int64     `json:"size"`
-	ModTime     time.Time `json:"mod_time"`
-	LineCount   int       `json:"line_count"`
-	FirstLogTime *time.Time `json:"first_log_time,omitempty"`
-	LastLogTime  *time.Time `json:"last_log_time,omitempty"`
-}
 
 // SystemLogHandler handles system log file operations
 type SystemLogHandler struct {
@@ -55,12 +38,6 @@ func NewSystemLogHandler(svcCtx *svc.ServiceContext) *SystemLogHandler {
 	}
 }
 
-// ListLogFilesRequest 获取日志文件列表请求
-type ListLogFilesRequest struct {
-	Page     int `form:"page"`
-	PageSize int `form:"pageSize"`
-}
-
 // ListLogFiles 分页获取日志文件列表
 // @Summary 分页获取日志文件列表
 // @Tags systemlog
@@ -68,10 +45,10 @@ type ListLogFilesRequest struct {
 // @Produce json
 // @Param page query int false "页码 (默认 1)"
 // @Param pageSize query int false "每页数量 (默认 10)"
-// @Success 200 {object} response.Response[response.PagedData[LogFileInfo]]
+// @Success 200 {object} response.Response[response.PagedData[response.LogFileInfo]]
 // @Router /api/systemlog/files [get]
 func (h *SystemLogHandler) ListLogFiles(ctx *gin.Context) {
-	var req ListLogFilesRequest
+	var req request.ListLogFilesRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.Error[any](response.CodeParameterFormatError, err.Error()))
 		return
@@ -85,7 +62,7 @@ func (h *SystemLogHandler) ListLogFiles(ctx *gin.Context) {
 	}
 
 	// Find all .jsonl files in log directory
-	var files []LogFileInfo
+	var files []response.LogFileInfo
 	err := filepath.WalkDir(h.logDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
@@ -97,11 +74,11 @@ func (h *SystemLogHandler) ListLogFiles(ctx *gin.Context) {
 			}
 			// Get line count and time range
 			lineCount, firstTime, lastTime := analyzeLogFile(path)
-			files = append(files, LogFileInfo{
-				Filename:    d.Name(),
-				Size:        info.Size(),
-				ModTime:     info.ModTime(),
-				LineCount:   lineCount,
+			files = append(files, response.LogFileInfo{
+				Filename:     d.Name(),
+				Size:         info.Size(),
+				ModTime:      info.ModTime(),
+				LineCount:    lineCount,
 				FirstLogTime: firstTime,
 				LastLogTime:  lastTime,
 			})
@@ -123,7 +100,7 @@ func (h *SystemLogHandler) ListLogFiles(ctx *gin.Context) {
 	start := (req.Page - 1) * req.PageSize
 	end := start + req.PageSize
 	if start >= len(files) {
-		files = []LogFileInfo{}
+		files = []response.LogFileInfo{}
 	} else {
 		if end > len(files) {
 			end = len(files)
@@ -131,7 +108,7 @@ func (h *SystemLogHandler) ListLogFiles(ctx *gin.Context) {
 		files = files[start:end]
 	}
 
-	ctx.JSON(http.StatusOK, response.Success(response.PagedData[LogFileInfo]{
+	ctx.JSON(http.StatusOK, response.Success(response.PagedData[response.LogFileInfo]{
 		Items: files,
 		Page: response.PageInfo{
 			Page:     req.Page,
@@ -139,16 +116,6 @@ func (h *SystemLogHandler) ListLogFiles(ctx *gin.Context) {
 			Total:    total,
 		},
 	}))
-}
-
-// GetLogContentRequest 获取日志内容请求
-type GetLogContentRequest struct {
-	Filename  string     `uri:"filename" binding:"required"`
-	Page      int        `form:"page"`
-	PageSize  int        `form:"pageSize"`
-	Level     *string    `form:"level"`
-	StartTime *time.Time `form:"start_time"`
-	EndTime   *time.Time `form:"end_time"`
 }
 
 // GetLogContent 分页获取日志文件内容
@@ -162,12 +129,12 @@ type GetLogContentRequest struct {
 // @Param level query string false "日志级别 (INFO/WARN/ERROR/DEBUG)"
 // @Param start_time query string false "开始时间 (2006-01-02T15:04:05Z07:00)"
 // @Param end_time query string false "结束时间 (2006-01-02T15:04:05Z07:00)"
-// @Success 200 {object} response.Response[response.PagedData[LogEntry]]
+// @Success 200 {object} response.Response[response.PagedData[response.LogEntry]]
 // @Failure 400 {object} response.Response[any]
 // @Failure 404 {object} response.Response[any]
 // @Router /api/systemlog/files/{filename} [get]
 func (h *SystemLogHandler) GetLogContent(ctx *gin.Context) {
-	var req GetLogContentRequest
+	var req request.GetLogContentRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.Error[any](response.CodeParameterFormatError, err.Error()))
 		return
@@ -204,7 +171,7 @@ func (h *SystemLogHandler) GetLogContent(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.Success(response.PagedData[LogEntry]{
+	ctx.JSON(http.StatusOK, response.Success(response.PagedData[response.LogEntry]{
 		Items: entries,
 		Page: response.PageInfo{
 			Page:     req.Page,
@@ -215,14 +182,14 @@ func (h *SystemLogHandler) GetLogContent(ctx *gin.Context) {
 }
 
 // readLogfileWithPagination reads a JSONL log file with pagination and filtering
-func (h *SystemLogHandler) readLogfileWithPagination(filePath string, page, pageSize int, level *string, startTime, endTime *time.Time) ([]LogEntry, int64, error) {
+func (h *SystemLogHandler) readLogfileWithPagination(filePath string, page, pageSize int, level *string, startTime, endTime *time.Time) ([]response.LogEntry, int64, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer file.Close()
 
-	var allEntries []LogEntry
+	var allEntries []response.LogEntry
 	scanner := bufio.NewScanner(file)
 
 	for scanner.Scan() {
@@ -231,11 +198,10 @@ func (h *SystemLogHandler) readLogfileWithPagination(filePath string, page, page
 			continue
 		}
 
-		var entry LogEntry
+		var entry response.LogEntry
 		if err := json.Unmarshal([]byte(line), &entry); err != nil {
 			continue // Skip invalid JSON lines
 		}
-		entry.Raw = line
 
 		// Apply filters
 		if level != nil && !strings.EqualFold(entry.Level, *level) {
@@ -266,7 +232,7 @@ func (h *SystemLogHandler) readLogfileWithPagination(filePath string, page, page
 	end := start + pageSize
 
 	if start >= len(allEntries) {
-		return []LogEntry{}, total, nil
+		return []response.LogEntry{}, total, nil
 	}
 	if end > len(allEntries) {
 		end = len(allEntries)
@@ -293,7 +259,7 @@ func analyzeLogFile(filePath string) (lineCount int, firstTime, lastTime *time.T
 		}
 		lineCount++
 
-		var entry LogEntry
+		var entry response.LogEntry
 		if err := json.Unmarshal([]byte(line), &entry); err == nil {
 			times = append(times, entry.Time)
 		}
@@ -318,17 +284,6 @@ func analyzeLogFile(filePath string) (lineCount int, firstTime, lastTime *time.T
 	return lineCount, firstTime, lastTime
 }
 
-// SearchLogsRequest 搜索日志请求
-type SearchLogsRequest struct {
-	Keyword   string     `form:"keyword" binding:"required"`
-	Filename  *string    `form:"filename"`
-	Level     *string    `form:"level"`
-	StartTime *time.Time `form:"start_time"`
-	EndTime   *time.Time `form:"end_time"`
-	Page      int        `form:"page"`
-	PageSize  int        `form:"pageSize"`
-}
-
 // SearchLogs 搜索日志内容
 // @Summary 搜索日志内容
 // @Tags systemlog
@@ -341,11 +296,11 @@ type SearchLogsRequest struct {
 // @Param end_time query string false "结束时间"
 // @Param page query int false "页码"
 // @Param pageSize query int false "每页数量"
-// @Success 200 {object} response.Response[response.PagedData[LogEntry]]
+// @Success 200 {object} response.Response[response.PagedData[response.LogEntry]]
 // @Failure 400 {object} response.Response[any]
 // @Router /api/systemlog/search [get]
 func (h *SystemLogHandler) SearchLogs(ctx *gin.Context) {
-	var req SearchLogsRequest
+	var req request.SearchLogsRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.Error[any](response.CodeParameterFormatError, err.Error()))
 		return
@@ -358,7 +313,7 @@ func (h *SystemLogHandler) SearchLogs(ctx *gin.Context) {
 		req.PageSize = 10
 	}
 
-	var allEntries []LogEntry
+	var allEntries []response.LogEntry
 
 	// Determine which files to search
 	var filesToSearch []string
@@ -404,7 +359,7 @@ func (h *SystemLogHandler) SearchLogs(ctx *gin.Context) {
 	end := start + req.PageSize
 
 	if start >= len(allEntries) {
-		allEntries = []LogEntry{}
+		allEntries = []response.LogEntry{}
 	} else {
 		if end > len(allEntries) {
 			end = len(allEntries)
@@ -412,7 +367,7 @@ func (h *SystemLogHandler) SearchLogs(ctx *gin.Context) {
 		allEntries = allEntries[start:end]
 	}
 
-	ctx.JSON(http.StatusOK, response.Success(response.PagedData[LogEntry]{
+	ctx.JSON(http.StatusOK, response.Success(response.PagedData[response.LogEntry]{
 		Items: allEntries,
 		Page: response.PageInfo{
 			Page:     req.Page,
@@ -420,26 +375,6 @@ func (h *SystemLogHandler) SearchLogs(ctx *gin.Context) {
 			Total:    total,
 		},
 	}))
-}
-
-// GetLogStatsRequest 获取日志统计请求
-type GetLogStatsRequest struct {
-	Filename  *string    `form:"filename"`
-	StartTime *time.Time `form:"start_time"`
-	EndTime   *time.Time `form:"end_time"`
-}
-
-// LogStatsResponse 日志统计响应
-type LogStatsResponse struct {
-	TotalEntries int64              `json:"total_entries"`
-	LevelCounts  map[string]int64   `json:"level_counts"`
-	HourlyCounts []HourlyCount      `json:"hourly_counts"`
-}
-
-// HourlyCount represents log count per hour
-type HourlyCount struct {
-	Hour  string `json:"hour"`
-	Count int64  `json:"count"`
 }
 
 // GetLogStats 获取日志统计信息
@@ -450,10 +385,10 @@ type HourlyCount struct {
 // @Param filename query string false "日志文件名"
 // @Param start_time query string false "开始时间"
 // @Param end_time query string false "结束时间"
-// @Success 200 {object} response.Response[LogStatsResponse]
+// @Success 200 {object} response.Response[response.LogStatsResponse]
 // @Router /api/systemlog/stats [get]
 func (h *SystemLogHandler) GetLogStats(ctx *gin.Context) {
-	var req GetLogStatsRequest
+	var req request.GetLogStatsRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.Error[any](response.CodeParameterFormatError, err.Error()))
 		return
@@ -494,7 +429,7 @@ func (h *SystemLogHandler) GetLogStats(ctx *gin.Context) {
 				continue
 			}
 
-			var entry LogEntry
+			var entry response.LogEntry
 			if err := json.Unmarshal([]byte(line), &entry); err != nil {
 				continue
 			}
@@ -518,9 +453,9 @@ func (h *SystemLogHandler) GetLogStats(ctx *gin.Context) {
 	}
 
 	// Convert hourly counts to sorted slice
-	hourlySlice := []HourlyCount{}
+	hourlySlice := []response.HourlyCount{}
 	for hour, count := range hourlyCounts {
-		hourlySlice = append(hourlySlice, HourlyCount{
+		hourlySlice = append(hourlySlice, response.HourlyCount{
 			Hour:  hour,
 			Count: count,
 		})
@@ -534,7 +469,7 @@ func (h *SystemLogHandler) GetLogStats(ctx *gin.Context) {
 		hourlySlice = hourlySlice[len(hourlySlice)-24:]
 	}
 
-	ctx.JSON(http.StatusOK, response.Success(LogStatsResponse{
+	ctx.JSON(http.StatusOK, response.Success(response.LogStatsResponse{
 		TotalEntries: totalEntries,
 		LevelCounts:  levelCounts,
 		HourlyCounts: hourlySlice,

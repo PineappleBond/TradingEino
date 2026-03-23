@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/PineappleBond/TradingEino/backend/internal/api/request"
 	"github.com/PineappleBond/TradingEino/backend/internal/api/response"
 	"github.com/PineappleBond/TradingEino/backend/internal/model"
 	"github.com/PineappleBond/TradingEino/backend/internal/repository"
@@ -24,15 +25,6 @@ func NewCronTaskHandler(svcCtx *svc.ServiceContext) *CronTaskHandler {
 	}
 }
 
-// ListTasksRequest 获取任务列表请求
-type ListTasksRequest struct {
-	Page     int               `form:"page"`
-	PageSize int               `form:"pageSize"`
-	Status   *model.TaskStatus `form:"status"`
-	Type     *model.TaskType   `form:"type"`
-	Enabled  *bool             `form:"enabled"`
-}
-
 // ListTasks 分页获取任务列表
 // @Summary 分页获取定时任务列表
 // @Tags crontask
@@ -43,10 +35,10 @@ type ListTasksRequest struct {
 // @Param status query string false "状态 (pending/running/completed/stopped/failed)"
 // @Param type query string false "类型 (once/recurring)"
 // @Param enabled query bool false "是否启用"
-// @Success 200 {object} response.Response[response.PagedData[model.CronTask]]
+// @Success 200 {object} response.Response[response.PagedData[response.CronTaskResponse]]
 // @Router /api/crontask [get]
 func (h *CronTaskHandler) ListTasks(ctx *gin.Context) {
-	var req ListTasksRequest
+	var req request.ListTasksRequest
 	if err := ctx.ShouldBindQuery(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.Error[any](response.CodeParameterFormatError, err.Error()))
 		return
@@ -65,8 +57,8 @@ func (h *CronTaskHandler) ListTasks(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.Success(response.PagedData[*model.CronTask]{
-		Items: tasks,
+	ctx.JSON(http.StatusOK, response.Success(response.PagedData[*response.CronTaskResponse]{
+		Items: response.ToCronTaskListResponse(tasks),
 		Page: response.PageInfo{
 			Page:     req.Page,
 			PageSize: req.PageSize,
@@ -75,23 +67,18 @@ func (h *CronTaskHandler) ListTasks(ctx *gin.Context) {
 	}))
 }
 
-// GetTaskRequest 获取任务详情请求
-type GetTaskRequest struct {
-	ID uint `uri:"id" binding:"required,min=1"`
-}
-
 // GetTask 获取任务详情
 // @Summary 获取定时任务详情
 // @Tags crontask
 // @Accept json
 // @Produce json
 // @Param id path int true "任务 ID"
-// @Success 200 {object} response.Response[model.CronTask]
+// @Success 200 {object} response.Response[response.CronTaskResponse]
 // @Failure 400 {object} response.Response[any]
 // @Failure 404 {object} response.Response[any]
 // @Router /api/crontask/{id} [get]
 func (h *CronTaskHandler) GetTask(ctx *gin.Context) {
-	var req GetTaskRequest
+	var req request.GetTaskRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.Error[any](response.CodeParameterFormatError, err.Error()))
 		return
@@ -103,22 +90,7 @@ func (h *CronTaskHandler) GetTask(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.Success(task))
-}
-
-// CreateTaskRequest 创建任务请求
-type CreateTaskRequest struct {
-	Name           string          `json:"name" binding:"required,max=100"`
-	Spec           string          `json:"spec" binding:"omitempty,max=50"`
-	Type           model.TaskType  `json:"type" binding:"required,oneof=once recurring"`
-	ExecType       string          `json:"exec_type" binding:"required,max=50"`
-	Raw            string          `json:"raw" binding:"omitempty"`
-	ValidFrom      *time.Time      `json:"valid_from"`
-	ValidUntil     *time.Time      `json:"valid_until"`
-	Enabled        bool            `json:"enabled"`
-	MaxRetries     int             `json:"max_retries"`
-	TimeoutSeconds int             `json:"timeout_seconds"`
-	NextExecutionAt *time.Time     `json:"next_execution_at"`
+	ctx.JSON(http.StatusOK, response.Success(response.ToCronTaskResponse(task)))
 }
 
 // CreateTask 创建任务
@@ -126,12 +98,12 @@ type CreateTaskRequest struct {
 // @Tags crontask
 // @Accept json
 // @Produce json
-// @Param task body CreateTaskRequest true "任务信息"
-// @Success 200 {object} response.Response[model.CronTask]
+// @Param task body request.CreateTaskRequest true "任务信息"
+// @Success 200 {object} response.Response[response.CronTaskResponse]
 // @Failure 400 {object} response.Response[any]
 // @Router /api/crontask [post]
 func (h *CronTaskHandler) CreateTask(ctx *gin.Context) {
-	var req CreateTaskRequest
+	var req request.CreateTaskRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.Error[any](response.CodeParameterFormatError, err.Error()))
 		return
@@ -165,27 +137,7 @@ func (h *CronTaskHandler) CreateTask(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.Success(task))
-}
-
-// UpdateTaskRequest 更新任务请求
-type UpdateTaskRequest struct {
-	ID uint `uri:"id" binding:"required,min=1"`
-}
-
-// UpdateTaskRequest 更新任务请求体
-type UpdateTaskBody struct {
-	Name            string          `json:"name" binding:"omitempty,max=100"`
-	Spec            string          `json:"spec" binding:"omitempty,max=50"`
-	Type            model.TaskType  `json:"type" binding:"omitempty,oneof=once recurring"`
-	ExecType        string          `json:"exec_type" binding:"omitempty,max=50"`
-	Raw             string          `json:"raw" binding:"omitempty"`
-	ValidFrom       *time.Time      `json:"valid_from"`
-	ValidUntil      *time.Time      `json:"valid_until"`
-	Enabled         *bool           `json:"enabled"`
-	MaxRetries      int             `json:"max_retries"`
-	TimeoutSeconds  int             `json:"timeout_seconds"`
-	NextExecutionAt *time.Time      `json:"next_execution_at"`
+	ctx.JSON(http.StatusOK, response.Success(response.ToCronTaskResponse(task)))
 }
 
 // UpdateTask 更新任务
@@ -194,19 +146,19 @@ type UpdateTaskBody struct {
 // @Accept json
 // @Produce json
 // @Param id path int true "任务 ID"
-// @Param task body UpdateTaskBody true "任务信息"
-// @Success 200 {object} response.Response[model.CronTask]
+// @Param task body request.UpdateTaskBody true "任务信息"
+// @Success 200 {object} response.Response[response.CronTaskResponse]
 // @Failure 400 {object} response.Response[any]
 // @Failure 404 {object} response.Response[any]
 // @Router /api/crontask/{id} [put]
 func (h *CronTaskHandler) UpdateTask(ctx *gin.Context) {
-	var uriReq UpdateTaskRequest
+	var uriReq request.UpdateTaskRequest
 	if err := ctx.ShouldBindUri(&uriReq); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.Error[any](response.CodeParameterFormatError, err.Error()))
 		return
 	}
 
-	var bodyReq UpdateTaskBody
+	var bodyReq request.UpdateTaskBody
 	if err := ctx.ShouldBindJSON(&bodyReq); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.Error[any](response.CodeParameterFormatError, err.Error()))
 		return
@@ -262,12 +214,7 @@ func (h *CronTaskHandler) UpdateTask(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, response.Success(task))
-}
-
-// DeleteTaskRequest 删除任务请求
-type DeleteTaskRequest struct {
-	ID uint `uri:"id" binding:"required,min=1"`
+	ctx.JSON(http.StatusOK, response.Success(response.ToCronTaskResponse(task)))
 }
 
 // DeleteTask 删除任务
@@ -281,7 +228,7 @@ type DeleteTaskRequest struct {
 // @Failure 404 {object} response.Response[any]
 // @Router /api/crontask/{id} [delete]
 func (h *CronTaskHandler) DeleteTask(ctx *gin.Context) {
-	var req DeleteTaskRequest
+	var req request.DeleteTaskRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.Error[any](response.CodeParameterFormatError, err.Error()))
 		return
@@ -301,11 +248,6 @@ func (h *CronTaskHandler) DeleteTask(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.Success("deleted"))
 }
 
-// TaskActionRequest 任务操作请求
-type TaskActionRequest struct {
-	ID uint `uri:"id" binding:"required,min=1"`
-}
-
 // EnableTask 启用任务
 // @Summary 启用定时任务
 // @Tags crontask
@@ -317,7 +259,7 @@ type TaskActionRequest struct {
 // @Failure 404 {object} response.Response[any]
 // @Router /api/crontask/{id}/enable [post]
 func (h *CronTaskHandler) EnableTask(ctx *gin.Context) {
-	var req TaskActionRequest
+	var req request.TaskActionRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.Error[any](response.CodeParameterFormatError, err.Error()))
 		return
@@ -348,7 +290,7 @@ func (h *CronTaskHandler) EnableTask(ctx *gin.Context) {
 // @Failure 404 {object} response.Response[any]
 // @Router /api/crontask/{id}/disable [post]
 func (h *CronTaskHandler) DisableTask(ctx *gin.Context) {
-	var req TaskActionRequest
+	var req request.TaskActionRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.Error[any](response.CodeParameterFormatError, err.Error()))
 		return
@@ -368,25 +310,19 @@ func (h *CronTaskHandler) DisableTask(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, response.Success("disabled"))
 }
 
-// StartTaskRequest 启动任务请求
-type StartTaskRequest struct {
-	ID                uint `uri:"id" binding:"required,min=1"`
-	NextExecutionTime string `json:"next_execution_time" binding:"required"`
-}
-
 // StartTask 启动任务（一次性任务或设置下次执行时间）
 // @Summary 启动定时任务
 // @Tags crontask
 // @Accept json
 // @Produce json
 // @Param id path int true "任务 ID"
-// @Param body body StartTaskRequest true "启动参数"
+// @Param body body request.StartTaskRequest true "启动参数"
 // @Success 200 {object} response.Response[string]
 // @Failure 400 {object} response.Response[any]
 // @Failure 404 {object} response.Response[any]
 // @Router /api/crontask/{id}/start [post]
 func (h *CronTaskHandler) StartTask(ctx *gin.Context) {
-	var req StartTaskRequest
+	var req request.StartTaskRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.Error[any](response.CodeParameterFormatError, err.Error()))
 		return
@@ -437,7 +373,7 @@ func (h *CronTaskHandler) StartTask(ctx *gin.Context) {
 // @Failure 404 {object} response.Response[any]
 // @Router /api/crontask/{id}/stop [post]
 func (h *CronTaskHandler) StopTask(ctx *gin.Context) {
-	var req TaskActionRequest
+	var req request.TaskActionRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.Error[any](response.CodeParameterFormatError, err.Error()))
 		return
