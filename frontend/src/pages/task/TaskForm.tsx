@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Card,
   Form,
@@ -27,30 +27,46 @@ const { RangePicker } = DatePicker;
 const TaskForm: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const copyFrom = searchParams.get('copyFrom');
   const isEdit = !!id;
+  const isCopy = !!copyFrom;
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [validRange, setValidRange] = useState<[Dayjs, Dayjs] | null>(null);
+  const [taskType, setTaskType] = useState<'once' | 'recurring'>('once');
+  const [nextExecutionTime, setNextExecutionTime] = useState<Dayjs | null>(null);
 
   /**
-   * 加载任务详情（编辑模式）
+   * 加载任务详情（编辑模式或拷贝模式）
    */
   useEffect(() => {
     if (isEdit && id) {
       loadTaskDetail();
+    } else if (isCopy && copyFrom) {
+      loadTaskForCopy(copyFrom);
     }
-  }, [id, isEdit]);
+  }, [id, isEdit, copyFrom, isCopy]);
 
   const loadTaskDetail = async () => {
     try {
       const res = await getTaskDetail(parseInt(id!, 10));
       const task = res.data;
 
+      // 设置任务类型（在填充表单之前，避免渲染问题）
+      const type = task.type as 'once' | 'recurring';
+      setTaskType(type);
+
+      // 设置下次执行时间（仅一次性任务）
+      if (type === 'once' && task.next_execution_at) {
+        setNextExecutionTime(dayjs(task.next_execution_at));
+      }
+
       // 填充表单值
       form.setFieldsValue({
-        name: task.name,
+        name: task.name + ' - 副本',
         spec: task.spec,
-        type: task.type,
+        type: type,
         exec_type: task.exec_type,
         symbol: JSON.parse(task.raw)?.symbol || '',
         valid_from: dayjs(task.valid_from),
@@ -69,6 +85,60 @@ const TaskForm: React.FC = () => {
   };
 
   /**
+   * 加载任务数据用于拷贝
+   */
+  const loadTaskForCopy = async (copyFromId: string) => {
+    try {
+      const res = await getTaskDetail(parseInt(copyFromId, 10));
+      const task = res.data;
+
+      // 设置任务类型（在填充表单之前，避免渲染问题）
+      const type = task.type as 'once' | 'recurring';
+      setTaskType(type);
+
+      // 设置下次执行时间（仅一次性任务）
+      if (type === 'once' && task.next_execution_at) {
+        setNextExecutionTime(dayjs(task.next_execution_at));
+      }
+
+      // 填充表单值（复制所有参数，名称添加副本后缀）
+      form.setFieldsValue({
+        name: task.name + ' - 副本',
+        spec: task.spec,
+        type: type,
+        exec_type: task.exec_type,
+        symbol: JSON.parse(task.raw)?.symbol || '',
+        valid_from: dayjs(task.valid_from),
+        valid_until: dayjs(task.valid_until),
+        enabled: task.enabled,
+        max_retries: task.max_retries,
+        timeout_seconds: task.timeout_seconds,
+      });
+
+      // 设置日期范围
+      setValidRange([dayjs(task.valid_from), dayjs(task.valid_until)]);
+
+      message.success('已复制任务参数，请修改后保存');
+    } catch (error) {
+      console.error('加载任务数据失败:', error);
+      message.error('加载任务数据失败');
+    }
+  };
+
+  /**
+   * 处理任务类型切换
+   */
+  const handleTypeChange = (value: 'once' | 'recurring') => {
+    setTaskType(value);
+    // 切换类型时清空对应字段
+    if (value === 'once') {
+      form.setFieldsValue({ spec: undefined });
+    } else {
+      setNextExecutionTime(null);
+    }
+  };
+
+  /**
    * 提交表单
    */
   const handleSubmit = async (values: any) => {
@@ -77,13 +147,12 @@ const TaskForm: React.FC = () => {
       // 构建 raw JSON 字符串
       const raw = JSON.stringify({ symbol: values.symbol });
 
-      // 转换日期格式
-      const validFrom = values.valid_from.format('YYYY-MM-DD HH:mm:ss');
-      const validUntil = values.valid_until.format('YYYY-MM-DD HH:mm:ss');
+      // 转换日期格式为 RFC3339
+      const validFrom = values.valid_from.format('YYYY-MM-DDTHH:mm:ssZ');
+      const validUntil = values.valid_until.format('YYYY-MM-DDTHH:mm:ssZ');
 
       const data: CreateTaskRequest | UpdateTaskRequest = {
         name: values.name,
-        spec: values.spec,
         type: values.type,
         exec_type: values.exec_type,
         raw,
@@ -93,6 +162,17 @@ const TaskForm: React.FC = () => {
         max_retries: values.max_retries,
         timeout_seconds: values.timeout_seconds,
       };
+
+      // 根据任务类型设置 spec 或 next_execution_at
+      if (values.type === 'once') {
+        // 一次性任务：传入 next_execution_at，不传 spec
+        if (nextExecutionTime) {
+          (data as any).next_execution_at = nextExecutionTime.format('YYYY-MM-DDTHH:mm:ssZ');
+        }
+      } else {
+        // 周期性任务：传入 spec
+        (data as any).spec = values.spec;
+      }
 
       if (isEdit) {
         await updateTask(parseInt(id!, 10), data);
@@ -121,7 +201,7 @@ const TaskForm: React.FC = () => {
             返回
           </Button>
           <Title level={4} style={{ margin: 0 }}>
-            {isEdit ? '编辑任务' : '创建任务'}
+            {isEdit ? '编辑任务' : isCopy ? '拷贝任务' : '创建任务'}
           </Title>
         </Space>
       }
@@ -152,27 +232,51 @@ const TaskForm: React.FC = () => {
         </Form.Item>
 
         <Form.Item
-          name="spec"
-          label="Cron 表达式"
-          rules={[
-            { required: true, message: '请输入 Cron 表达式' },
-            { max: 50, message: 'Cron 表达式不能超过 50 个字符' },
-          ]}
-          extra="例如：*/5 * * * * 表示每 5 分钟执行一次"
-        >
-          <Input placeholder="请输入 Cron 表达式" />
-        </Form.Item>
-
-        <Form.Item
           name="type"
           label="任务类型"
           rules={[{ required: true, message: '请选择任务类型' }]}
         >
-          <Select placeholder="请选择任务类型">
+          <Select
+            placeholder="请选择任务类型"
+            onChange={handleTypeChange}
+          >
             <Select.Option value="once">一次性</Select.Option>
             <Select.Option value="recurring">周期性</Select.Option>
           </Select>
         </Form.Item>
+
+        {/* 周期性任务：显示 Cron 表达式 */}
+        {taskType === 'recurring' && (
+          <Form.Item
+            name="spec"
+            label="Cron 表达式"
+            rules={[
+              { required: true, message: '请输入 Cron 表达式' },
+              { max: 50, message: 'Cron 表达式不能超过 50 个字符' },
+            ]}
+            extra="例如：*/5 * * * * 表示每 5 分钟执行一次"
+          >
+            <Input placeholder="请输入 Cron 表达式" />
+          </Form.Item>
+        )}
+
+        {/* 一次性任务：显示下次执行时间 */}
+        {taskType === 'once' && (
+          <Form.Item
+            label="下次执行时间"
+            required
+            rules={[{ required: true, message: '请选择下次执行时间' }]}
+          >
+            <DatePicker
+              value={nextExecutionTime}
+              onChange={(date) => setNextExecutionTime(date)}
+              showTime
+              format="YYYY-MM-DD HH:mm:ss"
+              style={{ width: '100%' }}
+              placeholder="请选择下次执行时间"
+            />
+          </Form.Item>
+        )}
 
         <Form.Item
           name="exec_type"

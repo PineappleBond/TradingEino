@@ -102,7 +102,43 @@ func (c *OkxCandlesticksTool) InvokableRun(ctx context.Context, argumentsInJSON 
 	output += fmt.Sprintf("# 近%d根`%s`周期的K线数据", len(rows), request.Bar)
 	output += "\n```markdown\n"
 	output += table
-	output += "\n```\n"
+	output += "\n```\n---\n"
+
+	// 输出筹码分布
+	volumeProfile := indicatorCalculator.CalculateVolumeProfile(30, 0.72, 180)
+	if volumeProfile != nil {
+		output += fmt.Sprintf("# 近 %d根`%s`周期的K线(%s ～ %s)数据的筹码分布", volumeProfile.KLineCount, request.Bar, volumeProfile.FirstCandlestick.Time.Format("2006年01月02日15时04分"), volumeProfile.LatestCandlestick.Time.Format("2006年01月02日15时04分"))
+		output += "\n```markdown\n"
+
+		output += `| 价格区间 |  占比 | Tag |
+`
+		output += `| :------ | :--- | :--- |
+`
+		for j := range volumeProfile.Items {
+			i := len(volumeProfile.Items) - 1 - j
+			item := volumeProfile.Items[i]
+			ratio := item.Ratio * 100
+			tag := ""
+			if i == volumeProfile.PocIndex {
+				tag += " [VPOC] "
+			}
+			if item.PriceLow <= volumeProfile.ValHigh && volumeProfile.ValHigh <= item.PriceHigh {
+				tag += " [VAH] "
+			}
+			if item.PriceLow <= volumeProfile.ValLow && volumeProfile.ValLow <= item.PriceHigh {
+				tag += " [VAL] "
+			}
+			output += fmt.Sprintf(
+				`| %.2f - %.2f | %.2f%% | %s |
+`,
+				item.PriceLow, item.PriceHigh, ratio, tag,
+			)
+		}
+
+		output += "\n```\n---\n"
+
+	}
+
 	return output, nil
 }
 

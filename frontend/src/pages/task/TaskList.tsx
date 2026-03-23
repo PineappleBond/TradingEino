@@ -19,6 +19,7 @@ import {
   DeleteOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  CopyOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { TaskStatus, TaskType, CronTask } from '../../types/crontask';
@@ -231,6 +232,14 @@ const TaskList: React.FC = () => {
               size="small"
               icon={<EditOutlined />}
               onClick={() => navigate(`/task/${record.id}/edit`)}
+            />
+          </Tooltip>
+          <Tooltip title="拷贝">
+            <Button
+              type="link"
+              size="small"
+              icon={<CopyOutlined />}
+              onClick={() => navigate(`/task/create?copyFrom=${record.id}`)}
             />
           </Tooltip>
           <Tooltip title={record.enabled ? '禁用' : '启用'}>

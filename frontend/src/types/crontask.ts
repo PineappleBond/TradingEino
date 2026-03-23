@@ -45,7 +45,7 @@ export interface CronTask {
  */
 export interface CreateTaskRequest {
   name: string;
-  spec: string;
+  spec?: string;
   type: TaskType;
   exec_type: ExecType;
   raw: string;

@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/PineappleBond/TradingEino/backend/internal/agent"
@@ -35,17 +37,41 @@ func (h *OKXWatcherHandler) Name() string {
 	return "OKXWatcher"
 }
 
+type OkxWatcherRawModel struct {
+	Symbol string `json:"symbol"`
+}
+
 // Execute 执行任务
 // task: 任务定义，包含 Raw 字段（JSON 格式的执行参数）
 // execution: 执行记录
 func (h *OKXWatcherHandler) Execute(ctx context.Context, task *model.CronTask, execution *model.CronExecution) error {
+	if task == nil {
+		return nil
+	}
+	if task.ExecType != h.Name() {
+		return nil
+	}
+	okxWatcherRawModel := &OkxWatcherRawModel{}
+	err := json.Unmarshal([]byte(task.Raw), okxWatcherRawModel)
+	if err != nil {
+		return &OKXWatcherNonRetryableError{
+			err: err,
+		}
+	}
 	agents := agent.Agents()
 	runner := adk.NewRunner(ctx, adk.RunnerConfig{Agent: agents.OkxWatcher})
 	var (
 		lastMessage       adk.Message
 		lastMessageStream *schema.StreamReader[adk.Message]
 	)
-	iter := runner.Query(ctx, fmt.Sprintf("现在时间是 %s, 开始对ETH-USDT-SWAP进行分析", time.Now().Format("2006年01月02日15时04分")))
+	queryText := fmt.Sprintf("现在时间是`%s`, 开始对`%s`进行分析", time.Now().Format("2006年01月02日15时04分"), okxWatcherRawModel.Symbol)
+	iter := runner.Query(ctx, queryText)
+	_ = h.cronExecutionLogRepository.Create(ctx, &model.CronExecutionLog{
+		ExecutionID: execution.ID,
+		From:        "user",
+		Level:       "info",
+		Message:     queryText,
+	})
 	for {
 		event, ok := iter.Next()
 		if !ok {
@@ -63,11 +89,18 @@ func (h *OKXWatcherHandler) Execute(ctx context.Context, task *model.CronTask, e
 			} else {
 				lastMessage = event.Output.MessageOutput.Message
 				lastMessageStream = nil
+				text := lastMessage.String()
+				// 永远是 from: 开头
+				textSplit := strings.Split(text, ":")
+				if len(textSplit) > 1 {
+					from := textSplit[0]
+					text = from + ":\n---\n" + strings.Join(textSplit[1:], ":")
+				}
 				_ = h.cronExecutionLogRepository.Create(ctx, &model.CronExecutionLog{
 					ExecutionID: execution.ID,
 					From:        event.AgentName,
 					Level:       "info",
-					Message:     lastMessage.String(),
+					Message:     text,
 				})
 			}
 		}
