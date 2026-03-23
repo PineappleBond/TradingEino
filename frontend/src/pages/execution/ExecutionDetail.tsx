@@ -8,10 +8,10 @@ import {
   Tag,
   Typography,
   Divider,
-  Table,
 } from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+import { ArrowLeftOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { CronExecution, ExecutionStatus } from '../../types/cronexecution';
 import type { CronExecutionLog } from '../../types/cronexecutionlog';
 import { getExecutionDetail } from '../../api/cronexecution';
@@ -51,6 +51,16 @@ const ExecutionDetail: React.FC = () => {
   const [execution, setExecution] = useState<CronExecution | null>(null);
   const [logs, setLogs] = useState<CronExecutionLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
+
+  /**
+   * 滚动到指定日志
+   */
+  const scrollToLog = (logId: number) => {
+    const element = document.getElementById(`log-${logId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
 
   /**
    * 加载执行记录详情
@@ -93,43 +103,6 @@ const ExecutionDetail: React.FC = () => {
       </Card>
     );
   }
-
-  /**
-   * 日志表格列配置
-   */
-  const logColumns: ColumnsType<CronExecutionLog> = [
-    {
-      title: 'ID',
-      dataIndex: 'id',
-      width: 60,
-    },
-    {
-      title: '级别',
-      dataIndex: 'level',
-      width: 80,
-      render: (level: string) => (
-        <Tag color={logLevelColorMap[level.toLowerCase()] || 'default'}>
-          {level.toUpperCase()}
-        </Tag>
-      ),
-    },
-    {
-      title: '来源',
-      dataIndex: 'from',
-      width: 120,
-    },
-    {
-      title: '消息',
-      dataIndex: 'message',
-      ellipsis: true,
-    },
-    {
-      title: '创建时间',
-      dataIndex: 'created_at',
-      width: 160,
-      render: (time: string) => dayjs(time).format('YYYY-MM-DD HH:mm:ss'),
-    },
-  ];
 
   return (
     <Card
@@ -191,14 +164,62 @@ const ExecutionDetail: React.FC = () => {
 
       <Divider>执行日志</Divider>
 
-      <Table
-        rowKey="id"
-        columns={logColumns}
-        dataSource={logs}
-        loading={logsLoading}
-        pagination={false}
-        scroll={{ x: 800 }}
-      />
+      <div className="chat-wrapper">
+        <div className="chat-messages">
+          {logsLoading ? (
+            <Paragraph>加载中...</Paragraph>
+          ) : logs.length === 0 ? (
+            <Paragraph style={{ textAlign: 'center', color: '#888' }}>暂无日志</Paragraph>
+          ) : (
+            <>
+              {logs.map((log, index) => {
+                const isEven = index % 2 === 0;
+                return (
+                  <div
+                    key={log.id}
+                    id={`log-${log.id}`}
+                    className={`chat-message ${isEven ? 'chat-message-even' : 'chat-message-odd'}`}
+                  >
+                    <div className="chat-message-header">
+                      <div className="chat-message-header-left">
+                        <Tag color={logLevelColorMap[log.level.toLowerCase()] || 'default'}>
+                          {log.level.toUpperCase()}
+                        </Tag>
+                        <span className="chat-message-from">{log.from}</span>
+                      </div>
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<ClockCircleOutlined />}
+                        onClick={() => scrollToLog(log.id)}
+                        className="chat-time-btn"
+                      >
+                        {dayjs(log.created_at).format('YYYY-MM-DD HH:mm:ss')}
+                      </Button>
+                    </div>
+                    <div className="chat-message-content">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{log.message}</ReactMarkdown>
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
+        </div>
+        <div className="chat-timeline">
+          {logs.map((log, index) => (
+            <div
+              key={log.id}
+              className="chat-timeline-item"
+              onClick={() => scrollToLog(log.id)}
+              title={dayjs(log.created_at).format('YYYY-MM-DD HH:mm:ss')}
+            >
+              <div className="chat-timeline-dot" />
+              {index < logs.length - 1 && <div className="chat-timeline-line" />}
+            </div>
+          ))}
+        </div>
+      </div>
     </Card>
   );
 };
