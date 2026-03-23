@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/PineappleBond/TradingEino/backend/internal/agent"
 	"github.com/PineappleBond/TradingEino/backend/internal/config"
 	"github.com/PineappleBond/TradingEino/backend/internal/logger"
 	"github.com/PineappleBond/TradingEino/backend/internal/service/scheduler"
@@ -40,7 +41,11 @@ func main() {
 
 	svcCtx := svc.NewServiceContext(*cfg)
 
-	_ = svcCtx
+	err = agent.InitAgents(svcCtx)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to init agents: %v\n", err)
+		os.Exit(1)
+	}
 
 	sch := scheduler.NewScheduler(svcCtx)
 	sch.RegisterDefaultHandlers()

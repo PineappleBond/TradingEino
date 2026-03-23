@@ -41,11 +41,35 @@ type SchedulerConfig struct {
 	DefaultTimeout int `mapstructure:"default_timeout"`
 }
 
+// ChatModelConfig holds chat model configuration
+type ChatModelConfig struct {
+	// APIKey is the API key for the chat model provider
+	APIKey string `mapstructure:"api_key"`
+	// BaseURL is the base URL for the chat model API
+	BaseURL string `mapstructure:"base_url"`
+	// Model is the model name to use
+	Model string `mapstructure:"model"`
+}
+
+// OKXConfig holds OKX exchange configuration
+type OKXConfig struct {
+	// ApiKey is the OKX API key
+	ApiKey string `mapstructure:"api_key"`
+	// SecretKey is the OKX API secret key
+	SecretKey string `mapstructure:"secret_key"`
+	// Passphrase is the OKX API passphrase
+	Passphrase string `mapstructure:"passphrase"`
+	// Sandbox enables sandbox mode (uses Demo server)
+	Sandbox bool `mapstructure:"sandbox"`
+}
+
 // Config holds all configuration for the application
 type Config struct {
 	Logger    LoggerConfig    `mapstructure:"logger"`
 	DB        DBConfig        `mapstructure:"db"`
 	Scheduler SchedulerConfig `mapstructure:"scheduler"`
+	ChatModel ChatModelConfig `mapstructure:"chat_model"`
+	OKX       OKXConfig       `mapstructure:"okx"`
 }
 
 // DefaultConfig returns a Config with default values
