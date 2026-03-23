@@ -128,6 +128,8 @@ func (s *Scheduler) Start() error {
 	s.wg.Add(1)
 	go s.scheduleLoop()
 
+	s.cron.Start()
+
 	logger.Info(s.ctx, "Scheduler: started")
 	return nil
 }

@@ -14,7 +14,7 @@ import (
 
 type AgentsModel struct {
 	svcCtx     *svc.ServiceContext
-	okxWatcher adk.Agent
+	OkxWatcher adk.Agent
 	mux        sync.Mutex
 	ctx        context.Context
 	cancel     context.CancelFunc
@@ -62,7 +62,7 @@ func InitAgents(svcCtx *svc.ServiceContext) error {
 
 	tmp := &AgentsModel{
 		svcCtx:     svcCtx,
-		okxWatcher: okxWatcher,
+		OkxWatcher: okxWatcher,
 		mux:        sync.Mutex{},
 		ctx:        ctx,
 		cancel:     cancel,
