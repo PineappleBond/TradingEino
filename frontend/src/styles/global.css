@@ -234,16 +234,19 @@ a:hover {
 .chat-wrapper {
   display: flex;
   gap: 12px;
-  height: calc(100vh - 80px);
+  height: 100%;
   min-height: 400px;
   padding: 16px;
   background: rgba(0, 0, 0, 0.2);
+  flex: 1;
 }
 
 .chat-messages {
   flex: 1;
   overflow-y: auto;
   padding-right: 8px;
+  display: flex;
+  flex-direction: column;
 }
 
 /* 消息整体包裹（头像 + 气泡） */

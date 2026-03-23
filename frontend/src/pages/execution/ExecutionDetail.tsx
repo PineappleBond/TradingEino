@@ -167,8 +167,8 @@ const ExecutionDetail: React.FC = () => {
   return (
     <Card
       className="cyber-card"
-      style={{ margin: 0, borderRadius: 0 }}
-      styles={{ body: { padding: 0 } }}
+      style={{ margin: 24, height: 'calc(100% - 48px)' }}
+      styles={{ body: { padding: 0, height: '100%' } }}
       title={
         <Space>
           <Button
