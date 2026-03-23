@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/PineappleBond/TradingEino/backend/internal/agent"
@@ -57,14 +56,30 @@ func formatEventMessage(event *adk.AgentEvent) string {
 	if msg == nil {
 		return ""
 	}
-	text := msg.String()
-	// 将 "from: " 格式化为 "from:\n---\n"
-	textSplit := strings.Split(text, ":")
-	if len(textSplit) > 1 {
-		from := textSplit[0]
-		return from + ":\n---\n" + strings.Join(textSplit[1:], ":")
+
+	role := string(msg.Role)
+	content := msg.Content
+	reasoningContent := msg.ReasoningContent
+	callFunctions := make([]schema.FunctionCall, 0)
+	for _, toolCall := range msg.ToolCalls {
+		if toolCall.Type == "function" {
+			callFunctions = append(callFunctions, toolCall.Function)
+		}
 	}
-	return text
+
+	output := "# 角色：" + role + "\n---\n"
+	output += content + "\n---\n"
+	output += "<details>\n<summary>推理过程</summary>\n" + reasoningContent + "\n</details>\n"
+	if len(callFunctions) > 0 {
+		output += "\n## 调用工具\n"
+		output += "| 工具名 | 参数 |\n"
+		output += "| :--- | :--- |\n"
+		for _, f := range callFunctions {
+			output += fmt.Sprintf("| %s | %s |\n", f.Name, f.Arguments)
+		}
+		output += "\n\n"
+	}
+	return output
 }
 
 // Execute 执行任务
@@ -92,7 +107,7 @@ func (h *OKXWatcherHandler) Execute(ctx context.Context, task *model.CronTask, e
 		lastMessageStream *schema.StreamReader[adk.Message]
 	)
 
-	queryText := fmt.Sprintf("现在时间是`%s`, 开始对`%s`进行分析.\n> 如果有必要，你可以调度不同维度的 Agent 共同讨论问题，最终整理你们的建议并告知原因.", time.Now().Format("2006 年 01 月 02 日 15 时 04 分"), okxWatcherRawModel.Symbol)
+	queryText := fmt.Sprintf("现在时间是`%s`, 开始对`%s`进行分析.\n> 如果有必要，你不必询问我，你可以调度不同维度的 Agent 共同讨论问题，最终整理你们的建议并告知原因.", time.Now().Format("2006 年 01 月 02 日 15 时 04 分"), okxWatcherRawModel.Symbol)
 	iter := runner.Query(ctx, queryText)
 	_ = h.cronExecutionLogRepository.Create(ctx, &model.CronExecutionLog{
 		ExecutionID: execution.ID,
@@ -105,6 +120,11 @@ func (h *OKXWatcherHandler) Execute(ctx context.Context, task *model.CronTask, e
 		event, ok := iter.Next()
 		if !ok {
 			break
+		}
+		// 添加调试输出
+		if false {
+			debugBytes, _ := json.Marshal(event)
+			fmt.Printf("DEBUG: event.AgentName=%s, RunPath=%v, JSON=%s\n", event.AgentName, event.RunPath, string(debugBytes))
 		}
 		if event.Output != nil && event.Output.MessageOutput != nil {
 			if lastMessageStream != nil {

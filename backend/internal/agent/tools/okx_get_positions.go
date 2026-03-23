@@ -100,7 +100,7 @@ func (c *OkxGetPositionsTool) InvokableRun(ctx context.Context, argumentsInJSON 
 			output += "\n```\n---\n\n"
 		}
 	}
-	output += "# 最大购买力\n\n"
+	output += "# 最大购买力(张合约)\n\n"
 	{
 		getMaxAvailSizeCCY := strings.TrimSuffix(request.Symbol, "-SWAP")
 		getMaxAvailSizeCCY = strings.TrimSuffix(getMaxAvailSizeCCY, "-USDT")
