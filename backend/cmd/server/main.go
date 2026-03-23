@@ -5,11 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/PineappleBond/TradingEino/backend/internal/agent"
 	"github.com/PineappleBond/TradingEino/backend/internal/config"
 	"github.com/PineappleBond/TradingEino/backend/internal/logger"
+	"github.com/PineappleBond/TradingEino/backend/internal/server"
 	"github.com/PineappleBond/TradingEino/backend/internal/service/scheduler"
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
 )
@@ -57,5 +57,7 @@ func main() {
 
 	logger.Info(ctx, "server initialized successfully")
 
-	time.Sleep(time.Hour * 24 * 360)
+	serve := server.NewServer(svcCtx)
+
+	serve.Start()
 }

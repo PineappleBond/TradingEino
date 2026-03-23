@@ -9,25 +9,34 @@ import (
 )
 
 type ServiceContext struct {
-	Config    config.Config
-	DB        *gorm.DB
-	ChatModel *openai.ChatModel
-	OKXClient *api.Client
+	Config     config.Config
+	Logger4Gin *logger.Logger
+	DB         *gorm.DB
+	ChatModel  *openai.ChatModel
+	OKXClient  *api.Client
 }
 
 func NewServiceContext(cfg config.Config) *ServiceContext {
-	log := logger.New(config.LoggerConfig{
+	gormLog := logger.New(config.LoggerConfig{
 		Level:     cfg.Logger.Level,
 		Output:    cfg.Logger.Output,
 		FilePath:  cfg.Logger.DBLogPath(),
 		AddSource: cfg.Logger.AddSource,
 	}, 5)
 
+	log4Gin := logger.New(config.LoggerConfig{
+		Level:     cfg.Logger.Level,
+		Output:    cfg.Logger.Output,
+		FilePath:  cfg.Logger.GinLogPath(),
+		AddSource: cfg.Logger.AddSource,
+	}, 5)
+
 	s := &ServiceContext{
-		DB:        mustInitDB(cfg, log),
-		Config:    cfg,
-		ChatModel: mustInitChatModel(cfg),
-		OKXClient: mustInitOKXClient(cfg),
+		Logger4Gin: log4Gin,
+		DB:         mustInitDB(cfg, gormLog),
+		Config:     cfg,
+		ChatModel:  mustInitChatModel(cfg),
+		OKXClient:  mustInitOKXClient(cfg),
 	}
 	return s
 }

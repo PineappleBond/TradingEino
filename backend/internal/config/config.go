@@ -9,6 +9,12 @@ import (
 	"github.com/spf13/viper"
 )
 
+// ServerConfig holds server configuration
+type ServerConfig struct {
+	Mode     string `mapstructure:"mode"`      // debug/release/test
+	ListenOn string `mapstructure:"listen_on"` // 0.0.0.0:21098
+}
+
 // LoggerConfig holds logger configuration
 type LoggerConfig struct {
 	// Level is the minimum log level to display
@@ -65,6 +71,7 @@ type OKXConfig struct {
 
 // Config holds all configuration for the application
 type Config struct {
+	Server    ServerConfig    `mapstructure:"server"`
 	Logger    LoggerConfig    `mapstructure:"logger"`
 	DB        DBConfig        `mapstructure:"db"`
 	Scheduler SchedulerConfig `mapstructure:"scheduler"`
@@ -75,6 +82,10 @@ type Config struct {
 // DefaultConfig returns a Config with default values
 func DefaultConfig() *Config {
 	return &Config{
+		Server: ServerConfig{
+			ListenOn: "0.0.0.0:10098",
+			Mode:     "debug",
+		},
 		Logger: LoggerConfig{
 			Level:     "info",
 			Output:    "stdout",
@@ -100,6 +111,8 @@ func Load(configPath string) (*Config, error) {
 	v := viper.New()
 
 	// Set default values
+	v.SetDefault("server.mode", "debug")
+	v.SetDefault("server.listen_on", "0.0.0.0:10098")
 	v.SetDefault("logger.level", "info")
 	v.SetDefault("logger.format", "json")
 	v.SetDefault("logger.output", "stdout")
@@ -152,5 +165,13 @@ func (c LoggerConfig) DBLogPath() string {
 	dir := filepath.Dir(filePath)
 	ext := filepath.Ext(filePath)
 	dbLogFile := filepath.Join(dir, "gorm.log"+ext)
+	return dbLogFile
+}
+
+func (c LoggerConfig) GinLogPath() string {
+	filePath := c.FilePath
+	dir := filepath.Dir(filePath)
+	ext := filepath.Ext(filePath)
+	dbLogFile := filepath.Join(dir, "gin.log"+ext)
 	return dbLogFile
 }
