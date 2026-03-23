@@ -7,7 +7,7 @@ import (
 )
 
 type ServiceContext struct {
-	config config.Config
+	Config config.Config
 	DB     *gorm.DB
 }
 
@@ -20,7 +20,7 @@ func NewServiceContext(cfg config.Config) *ServiceContext {
 	}, 5)
 	s := &ServiceContext{
 		DB:     mustInitDB(cfg, log),
-		config: cfg,
+		Config: cfg,
 	}
 	return s
 }

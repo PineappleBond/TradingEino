@@ -15,9 +15,6 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.Logger.Level != "info" {
 		t.Errorf("expected default level 'info', got '%s'", cfg.Logger.Level)
 	}
-	if cfg.Logger.Format != "json" {
-		t.Errorf("expected default format 'json', got '%s'", cfg.Logger.Format)
-	}
 	if cfg.Logger.Output != "stdout" {
 		t.Errorf("expected default output 'stdout', got '%s'", cfg.Logger.Output)
 	}
@@ -47,7 +44,6 @@ func TestLoad_FromYamlFile(t *testing.T) {
 	configContent := `
 logger:
   level: debug
-  format: json
   output: stderr
   add_source: false
 `
@@ -63,9 +59,6 @@ logger:
 
 	if cfg.Logger.Level != "debug" {
 		t.Errorf("expected level 'debug', got '%s'", cfg.Logger.Level)
-	}
-	if cfg.Logger.Format != "json" {
-		t.Errorf("expected format 'json', got '%s'", cfg.Logger.Format)
 	}
 	if cfg.Logger.Output != "stderr" {
 		t.Errorf("expected output 'stderr', got '%s'", cfg.Logger.Output)
@@ -83,7 +76,6 @@ func TestLoad_EnvironmentVariableOverride(t *testing.T) {
 	configContent := `
 logger:
   level: info
-  format: json
   output: stdout
 `
 	err := os.WriteFile(configPath, []byte(configContent), 0644)

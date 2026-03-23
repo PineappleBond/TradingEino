@@ -74,43 +74,6 @@ func TestCronTaskRepository_GetByID_NotFound(t *testing.T) {
 	}
 }
 
-func TestCronTaskRepository_GetByName(t *testing.T) {
-	svcCtx := newTestServiceContext(t)
-	repo := NewCronTaskRepository(svcCtx)
-
-	task := &model.CronTask{
-		Name:     "unique-task",
-		Spec:     "0 * * * *",
-		Type:     model.TaskTypeRecurring,
-		Status:   model.TaskStatusPending,
-		ExecType: "http",
-		Enabled:  true,
-	}
-	if err := repo.Create(context.Background(), task); err != nil {
-		t.Fatalf("Create() error = %v", err)
-	}
-
-	// Test GetByName
-	got, err := repo.GetByName(context.Background(), "unique-task")
-	if err != nil {
-		t.Fatalf("GetByName() error = %v", err)
-	}
-
-	if got.Name != task.Name {
-		t.Errorf("GetByName() Name = %v, want %v", got.Name, task.Name)
-	}
-}
-
-func TestCronTaskRepository_GetByName_NotFound(t *testing.T) {
-	svcCtx := newTestServiceContext(t)
-	repo := NewCronTaskRepository(svcCtx)
-
-	_, err := repo.GetByName(context.Background(), "non-existent-task")
-	if err == nil {
-		t.Error("GetByName() expected error for non-existent name")
-	}
-}
-
 func TestCronTaskRepository_GetAll(t *testing.T) {
 	svcCtx := newTestServiceContext(t)
 	repo := NewCronTaskRepository(svcCtx)
@@ -204,7 +167,8 @@ func TestCronTaskRepository_GetRecurringTasks(t *testing.T) {
 	// Create tasks with different types
 	tasks := []*model.CronTask{
 		{Name: "recurring-1", Type: model.TaskTypeRecurring, Status: model.TaskStatusPending, ExecType: "http", Enabled: true},
-		{Name: "recurring-2", Type: model.TaskTypeRecurring, Status: model.TaskStatusRunning, ExecType: "http", Enabled: false},
+		{Name: "recurring-2", Type: model.TaskTypeRecurring, Status: model.TaskStatusRunning, ExecType: "http", Enabled: true},
+		{Name: "recurring-disabled", Type: model.TaskTypeRecurring, Status: model.TaskStatusPending, ExecType: "http", Enabled: false},
 		{Name: "once-1", Type: model.TaskTypeOnce, Status: model.TaskStatusPending, ExecType: "http", Enabled: true},
 	}
 
@@ -212,9 +176,18 @@ func TestCronTaskRepository_GetRecurringTasks(t *testing.T) {
 		if err := repo.Create(context.Background(), task); err != nil {
 			t.Fatalf("Create() error = %v", err)
 		}
+		// Update enabled using raw SQL (GORM ignores boolean false)
+		enabledValue := 0
+		if task.Enabled {
+			enabledValue = 1
+		}
+		r := svcCtx.DB.Exec("UPDATE cron_task SET enabled = ? WHERE id = ?", enabledValue, task.ID)
+		if r.Error != nil {
+			t.Fatalf("Update enabled error = %v", r.Error)
+		}
 	}
 
-	// Test GetRecurringTasks
+	// Test GetRecurringTasks - should return 2 enabled recurring tasks
 	got, err := repo.GetRecurringTasks(context.Background())
 	if err != nil {
 		t.Fatalf("GetRecurringTasks() error = %v", err)
@@ -792,5 +765,80 @@ func TestCronTaskRepository_GetTasksDueForExecution(t *testing.T) {
 
 	if len(got) != 2 {
 		t.Errorf("GetTasksDueForExecution() len = %d, want %d", len(got), 2)
+	}
+}
+
+func TestCronTaskRepository_GetDueTasksWithLock(t *testing.T) {
+	svcCtx := newTestServiceContext(t)
+	repo := NewCronTaskRepository(svcCtx)
+
+	now := time.Now()
+	dueTime := now.Add(-1 * time.Hour)
+
+	// Create tasks that are due
+	tasks := []*model.CronTask{
+		{Name: "due-once", Type: model.TaskTypeOnce, Status: model.TaskStatusPending, ExecType: "http", Enabled: true},
+		{Name: "due-recurring", Type: model.TaskTypeRecurring, Status: model.TaskStatusPending, ExecType: "http", Enabled: true},
+		{Name: "future-task", Type: model.TaskTypeRecurring, Status: model.TaskStatusPending, ExecType: "http", Enabled: true},
+		{Name: "disabled-task", Type: model.TaskTypeOnce, Status: model.TaskStatusPending, ExecType: "http", Enabled: false},
+	}
+
+	for _, task := range tasks {
+		if err := repo.Create(context.Background(), task); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+		taskID := task.ID
+
+		// Update NextExecutionAt and enabled using raw SQL (GORM ignores boolean false)
+		var nextExecAt sql.NullTime
+		if task.Name == "future-task" {
+			nextExecAt = sql.NullTime{Time: now.Add(1 * time.Hour), Valid: true}
+		} else {
+			nextExecAt = sql.NullTime{Time: dueTime, Valid: true}
+		}
+
+		enabledValue := 0
+		if task.Enabled {
+			enabledValue = 1
+		}
+
+		// Use a single raw SQL update to avoid GORM boolean issues
+		r := svcCtx.DB.Exec("UPDATE cron_task SET next_execution_at = ?, enabled = ? WHERE id = ?",
+			nextExecAt.Time, enabledValue, taskID)
+		if r.Error != nil {
+			t.Fatalf("Update error = %v", r.Error)
+		}
+		if r.RowsAffected != 1 {
+			t.Fatalf("Update rows affected = %d, want 1", r.RowsAffected)
+		}
+	}
+
+	// Test GetDueTasksWithLock - should return 2 enabled tasks that are due
+	got, err := repo.GetDueTasksWithLock(context.Background(), now)
+	if err != nil {
+		t.Fatalf("GetDueTasksWithLock() error = %v", err)
+	}
+
+	if len(got) != 2 {
+		t.Errorf("GetDueTasksWithLock() len = %d, want %d", len(got), 2)
+	}
+
+	// Verify the correct tasks were returned
+	names := make(map[string]bool)
+	for _, task := range got {
+		names[task.Name] = true
+	}
+
+	if !names["due-once"] {
+		t.Error("GetDueTasksWithLock() should include due-once task")
+	}
+	if !names["due-recurring"] {
+		t.Error("GetDueTasksWithLock() should include due-recurring task")
+	}
+	if names["future-task"] {
+		t.Error("GetDueTasksWithLock() should not include future-task")
+	}
+	if names["disabled-task"] {
+		t.Error("GetDueTasksWithLock() should not include disabled-task")
 	}
 }

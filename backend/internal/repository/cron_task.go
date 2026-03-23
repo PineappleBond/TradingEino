@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/PineappleBond/TradingEino/backend/internal/model"
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
@@ -28,16 +29,6 @@ func (r *CronTaskRepository) Create(ctx context.Context, task *model.CronTask) e
 func (r *CronTaskRepository) GetByID(ctx context.Context, id uint) (*model.CronTask, error) {
 	var task model.CronTask
 	err := r.svcCtx.DB.WithContext(ctx).First(&task, id).Error
-	if err != nil {
-		return nil, err
-	}
-	return &task, nil
-}
-
-// GetByName 根据名称获取 CronTask 记录
-func (r *CronTaskRepository) GetByName(ctx context.Context, name string) (*model.CronTask, error) {
-	var task model.CronTask
-	err := r.svcCtx.DB.WithContext(ctx).Where("name = ?", name).First(&task).Error
 	if err != nil {
 		return nil, err
 	}
@@ -185,6 +176,18 @@ func (r *CronTaskRepository) GetTasksDueForExecution(ctx context.Context, now ti
 	err := r.svcCtx.DB.WithContext(ctx).
 		Where("type = ? AND (status = ? OR status = ?) AND enabled = ? AND next_execution_at <= ? AND next_execution_at IS NOT NULL",
 			model.TaskTypeRecurring, model.TaskStatusPending, model.TaskStatusRunning, true, now).
+		Find(&tasks).Error
+	return tasks, err
+}
+
+// GetDueTasksWithLock 获取到期的任务并加行级锁（用于多实例部署防竞态）
+// 使用 SELECT FOR UPDATE SKIP LOCKED，被其他实例锁定的行会被跳过而不是阻塞
+func (r *CronTaskRepository) GetDueTasksWithLock(ctx context.Context, now time.Time) ([]*model.CronTask, error) {
+	var tasks []*model.CronTask
+	err := r.svcCtx.DB.WithContext(ctx).
+		Clauses(clause.Locking{Strength: "UPDATE", Options: "SKIP LOCKED"}).
+		Where("(type = ? OR type = ?) AND status = ? AND enabled = ? AND next_execution_at <= ? AND next_execution_at IS NOT NULL",
+			model.TaskTypeOnce, model.TaskTypeRecurring, model.TaskStatusPending, true, now).
 		Find(&tasks).Error
 	return tasks, err
 }

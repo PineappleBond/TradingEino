@@ -33,7 +33,6 @@ func main() {
 	logger.Info(ctx, "application starting",
 		"config_path", *configPath,
 		"log_level", cfg.Logger.Level,
-		"log_format", cfg.Logger.Format,
 		"log_output", cfg.Logger.Output,
 	)
 

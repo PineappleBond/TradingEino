@@ -29,10 +29,23 @@ type DBConfig struct {
 	DBPath string `mapstructure:"db_path"`
 }
 
+// SchedulerConfig holds scheduler configuration
+type SchedulerConfig struct {
+	// Enabled enables the scheduler
+	Enabled bool `mapstructure:"enabled"`
+	// MaxConcurrency is the maximum number of concurrent task executions
+	MaxConcurrency int `mapstructure:"max_concurrency"`
+	// CheckInterval is the interval in seconds to check for due tasks
+	CheckInterval int `mapstructure:"check_interval"`
+	// DefaultTimeout is the default timeout in seconds for task execution
+	DefaultTimeout int `mapstructure:"default_timeout"`
+}
+
 // Config holds all configuration for the application
 type Config struct {
-	Logger LoggerConfig `mapstructure:"logger"`
-	DB     DBConfig     `mapstructure:"db"`
+	Logger    LoggerConfig    `mapstructure:"logger"`
+	DB        DBConfig        `mapstructure:"db"`
+	Scheduler SchedulerConfig `mapstructure:"scheduler"`
 }
 
 // DefaultConfig returns a Config with default values
@@ -46,6 +59,12 @@ func DefaultConfig() *Config {
 		DB: DBConfig{
 			Type:   "sqlite",
 			DBPath: "./data/TradingEino.db",
+		},
+		Scheduler: SchedulerConfig{
+			Enabled:        true,
+			MaxConcurrency: 5,
+			CheckInterval:  10,
+			DefaultTimeout: 300,
 		},
 	}
 }
@@ -63,6 +82,10 @@ func Load(configPath string) (*Config, error) {
 	v.SetDefault("logger.add_source", true)
 	v.SetDefault("db.type", "sqlite")
 	v.SetDefault("db.db_path", "./data/TradingEino.db")
+	v.SetDefault("scheduler.enabled", true)
+	v.SetDefault("scheduler.max_concurrency", 5)
+	v.SetDefault("scheduler.check_interval", 10)
+	v.SetDefault("scheduler.default_timeout", 300)
 
 	// Configure file reading
 	if configPath != "" {

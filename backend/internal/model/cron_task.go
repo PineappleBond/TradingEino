@@ -38,8 +38,9 @@ type CronTask struct {
 	Raw             string     `gorm:"type:text;comment:'原始数据 (JSON 格式)'"`
 	ValidFrom       sql.NullTime `gorm:"comment:'有效期开始'"`
 	ValidUntil      sql.NullTime `gorm:"comment:'有效期结束'"`
-	Enabled         bool       `gorm:"not null;default:true;comment:'是否启用'"`
+	Enabled         bool       `gorm:"not null;comment:'是否启用'"`
 	MaxRetries      int        `gorm:"not null;default:0;comment:'最大重试次数'"`
+	TimeoutSeconds  int        `gorm:"not null;default:300;comment:'执行超时时间（秒）'"`
 	LastExecutedAt  sql.NullTime `gorm:"comment:'上次执行时间'"`
 	NextExecutionAt sql.NullTime `gorm:"comment:'下次执行时间'"`
 	TotalExecutions uint       `gorm:"not null;default:0;comment:'累计执行次数'"`
