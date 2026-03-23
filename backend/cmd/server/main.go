@@ -59,5 +59,8 @@ func main() {
 
 	serve := server.NewServer(svcCtx)
 
-	serve.Start()
+	if err := serve.Start(); err != nil {
+		logger.Error(ctx, "failed to start server", err)
+		os.Exit(1)
+	}
 }

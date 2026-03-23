@@ -1,12 +1,14 @@
 package api
 
 import (
+	"context"
 	"io/fs"
-	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/PineappleBond/TradingEino/backend/internal/api/handler"
+	"github.com/PineappleBond/TradingEino/backend/internal/logger"
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
 	"github.com/PineappleBond/TradingEino/backend/web"
 	"github.com/gin-gonic/gin"
@@ -61,17 +63,19 @@ func setUpWeb(r *gin.Engine) {
 	// 静态文件服务 - 嵌入前端资源
 	staticFS, err := fs.Sub(web.DistFS, "dist")
 	if err != nil {
-		log.Fatalf("Failed to create static filesystem: %v", err)
+		logger.Error(context.Background(), "Failed to create static filesystem: %v", err)
+		os.Exit(1)
 	}
 
 	// 调试：列出嵌入的文件
-	log.Println("Embedded files:")
-	fs.WalkDir(staticFS, ".", func(path string, d fs.DirEntry, err error) error {
+	if err := fs.WalkDir(staticFS, ".", func(path string, d fs.DirEntry, err error) error {
 		if err == nil {
-			log.Printf("  %s (dir: %v)", path, d.IsDir())
+			logger.Debug(context.Background(), "  %s (dir: %v)", path, d.IsDir())
 		}
 		return nil
-	})
+	}); err != nil {
+		logger.Error(context.Background(), "Failed to walk embedded files: %v", err)
+	}
 
 	// 前端路由处理
 	r.NoRoute(func(c *gin.Context) {

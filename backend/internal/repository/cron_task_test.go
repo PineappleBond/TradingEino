@@ -637,7 +637,6 @@ func TestCronTaskRepository_GetDueTasks(t *testing.T) {
 	dueTime := now.Add(-1 * time.Hour)
 	futureTime := now.Add(1 * time.Hour)
 
-	var tasks []*model.CronTask
 	for i, td := range taskData {
 		task := &model.CronTask{
 			Name:     td.Name,
@@ -649,7 +648,6 @@ func TestCronTaskRepository_GetDueTasks(t *testing.T) {
 		if err := repo.Create(context.Background(), task); err != nil {
 			t.Fatalf("Create() error = %v", err)
 		}
-		tasks = append(tasks, task)
 
 		// Update enabled using SQL to handle false value correctly
 		enabledValue := 0

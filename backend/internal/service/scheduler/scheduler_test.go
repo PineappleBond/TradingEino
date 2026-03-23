@@ -176,7 +176,7 @@ func (h *mockHandler) Execute(ctx context.Context, task *model.CronTask, executi
 	return h.execErr
 }
 
-func (h *mockHandler) getExecCount() int {
+func (h *mockHandler) GetExecCount() int {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.execCount
@@ -208,7 +208,7 @@ func (h *countingHandler) Execute(ctx context.Context, task *model.CronTask, exe
 	return h.executeFunc(ctx, task, execution)
 }
 
-func (h *countingHandler) getExecCount() int {
+func (h *countingHandler) GetExecCount() int {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.execCount
@@ -244,7 +244,7 @@ func TestScenario_TaskExecutionSuccess(t *testing.T) {
 
 	err := handler.Execute(context.Background(), task, execution)
 	assert.NoError(t, err)
-	assert.Equal(t, 1, handler.getExecCount())
+	assert.Equal(t, 1, handler.GetExecCount())
 }
 
 // TestScenario_DirectTaskExecution 场景：直接调用 onTaskTrigger 验证完整流程
@@ -276,7 +276,7 @@ func TestScenario_DirectTaskExecution(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// 验证任务已执行
-	assert.GreaterOrEqual(t, handler.getExecCount(), 1, "任务应该至少执行一次")
+	assert.GreaterOrEqual(t, handler.GetExecCount(), 1, "任务应该至少执行一次")
 }
 
 // TestScenario_TaskExecutionFailure 场景：任务执行失败
@@ -312,7 +312,7 @@ func TestScenario_TaskExecutionFailure(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// 验证任务执行了一次
-	assert.GreaterOrEqual(t, handler.getExecCount(), 1, "任务应该至少执行一次")
+	assert.GreaterOrEqual(t, handler.GetExecCount(), 1, "任务应该至少执行一次")
 }
 
 // TestScenario_TaskRetry 场景：任务重试机制
@@ -352,7 +352,7 @@ func TestScenario_TaskRetry(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// 验证 handler 被调用
-	assert.GreaterOrEqual(t, handler.getExecCount(), 1, "任务应该至少执行一次")
+	assert.GreaterOrEqual(t, handler.GetExecCount(), 1, "任务应该至少执行一次")
 }
 
 // TestScenario_ConcurrencyLimit 场景：并发限制

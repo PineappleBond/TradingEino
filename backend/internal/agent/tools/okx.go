@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"sort"
 	"time"
 
+	"github.com/PineappleBond/TradingEino/backend/internal/logger"
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
 	"github.com/PineappleBond/TradingEino/backend/internal/utils/xmd"
 	"github.com/PineappleBond/TradingEino/backend/pkg/okex"
@@ -162,25 +162,6 @@ func (c *OkxCandlesticksTool) GetCandlesticks(
 	return candles, nil
 }
 
-func (c *OkxCandlesticksTool) get300CoinKLine(ctx context.Context, start time.Time, end time.Time, instId string, bar okex.BarSize) ([]*market.Candle, error) {
-	getCandlesticksHistory, err := c.svcCtx.OKXClient.Rest.Market.GetCandlesticksHistory(requests_market.GetCandlesticks{
-		InstID: instId,
-		After:  end.UnixMilli(),
-		Before: start.UnixMilli(),
-		Limit:  300,
-		Bar:    bar,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	candles := getCandlesticksHistory.Candles
-	sort.Slice(candles, func(i, j int) bool {
-		return time.Time(candles[i].TS).Before(time.Time(candles[j].TS))
-	})
-	return candles, nil
-}
-
 type Candlestick struct {
 	Close    *decimal.Decimal
 	Open     *decimal.Decimal
@@ -269,11 +250,11 @@ func NewIndicatorCalculator(marketCandles []*market.Candle) *IndicatorCalculator
 func (calc *IndicatorCalculator) Calculate(count int) []*TechnicalIndicators {
 	n := len(calc.candles)
 	if n == 0 {
-		log.Println("no candles")
+		logger.Debug(context.Background(), "no candles")
 		return nil
 	}
 	if n < count {
-		log.Printf("Warning: number of candles is less than the number of indicators: %d", n)
+		logger.Warn(context.Background(), "Warning: number of candles is less than the number of indicators: %d", n)
 		return nil
 	}
 
