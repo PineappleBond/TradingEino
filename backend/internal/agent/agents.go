@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/PineappleBond/TradingEino/backend/internal/agent/okx_watcher"
+	"github.com/PineappleBond/TradingEino/backend/internal/agent/risk_officer"
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
 	"github.com/cloudwego/eino/adk"
 )
@@ -25,9 +26,14 @@ func Agents() *AgentsModel {
 
 func InitAgents(svcCtx *svc.ServiceContext) error {
 	ctx, cancel := context.WithCancel(context.Background())
-	// TODO 多维度分析Agent
 	subAgents := make([]adk.Agent, 0)
-	err := okx_watcher.Init(ctx, svcCtx, subAgents...)
+	err := risk_officer.Init(ctx, svcCtx)
+	if err != nil {
+		cancel()
+		return err
+	}
+	subAgents = append(subAgents, risk_officer.RiskOfficer())
+	err = okx_watcher.Init(ctx, svcCtx, subAgents...)
 	if err != nil {
 		cancel()
 		return err

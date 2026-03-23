@@ -41,6 +41,32 @@ type OkxWatcherRawModel struct {
 	Symbol string `json:"symbol"`
 }
 
+func getActualAgentName(event *adk.AgentEvent) string {
+	if len(event.RunPath) == 0 {
+		return event.AgentName
+	}
+	// RunPath 的最后一个元素是实际产生事件的 Agent
+	return event.RunPath[len(event.RunPath)-1].String()
+}
+
+func formatEventMessage(event *adk.AgentEvent) string {
+	if event.Output == nil || event.Output.MessageOutput == nil {
+		return ""
+	}
+	msg := event.Output.MessageOutput.Message
+	if msg == nil {
+		return ""
+	}
+	text := msg.String()
+	// 将 "from: " 格式化为 "from:\n---\n"
+	textSplit := strings.Split(text, ":")
+	if len(textSplit) > 1 {
+		from := textSplit[0]
+		return from + ":\n---\n" + strings.Join(textSplit[1:], ":")
+	}
+	return text
+}
+
 // Execute 执行任务
 // task: 任务定义，包含 Raw 字段（JSON 格式的执行参数）
 // execution: 执行记录
@@ -60,11 +86,13 @@ func (h *OKXWatcherHandler) Execute(ctx context.Context, task *model.CronTask, e
 	}
 	agents := agent.Agents()
 	runner := adk.NewRunner(ctx, adk.RunnerConfig{Agent: agents.OkxWatcher})
+
 	var (
 		lastMessage       adk.Message
 		lastMessageStream *schema.StreamReader[adk.Message]
 	)
-	queryText := fmt.Sprintf("现在时间是`%s`, 开始对`%s`进行分析", time.Now().Format("2006年01月02日15时04分"), okxWatcherRawModel.Symbol)
+
+	queryText := fmt.Sprintf("现在时间是`%s`, 开始对`%s`进行分析.\n> 如果有必要，你可以调度不同维度的 Agent 共同讨论问题，最终整理你们的建议并告知原因.", time.Now().Format("2006 年 01 月 02 日 15 时 04 分"), okxWatcherRawModel.Symbol)
 	iter := runner.Query(ctx, queryText)
 	_ = h.cronExecutionLogRepository.Create(ctx, &model.CronExecutionLog{
 		ExecutionID: execution.ID,
@@ -72,6 +100,7 @@ func (h *OKXWatcherHandler) Execute(ctx context.Context, task *model.CronTask, e
 		Level:       "info",
 		Message:     queryText,
 	})
+
 	for {
 		event, ok := iter.Next()
 		if !ok {
@@ -89,19 +118,16 @@ func (h *OKXWatcherHandler) Execute(ctx context.Context, task *model.CronTask, e
 			} else {
 				lastMessage = event.Output.MessageOutput.Message
 				lastMessageStream = nil
-				text := lastMessage.String()
-				// 永远是 from: 开头
-				textSplit := strings.Split(text, ":")
-				if len(textSplit) > 1 {
-					from := textSplit[0]
-					text = from + ":\n---\n" + strings.Join(textSplit[1:], ":")
+				agentName := getActualAgentName(event)
+				text := formatEventMessage(event)
+				if text != "" {
+					_ = h.cronExecutionLogRepository.Create(ctx, &model.CronExecutionLog{
+						ExecutionID: execution.ID,
+						From:        agentName,
+						Level:       "info",
+						Message:     text,
+					})
 				}
-				_ = h.cronExecutionLogRepository.Create(ctx, &model.CronExecutionLog{
-					ExecutionID: execution.ID,
-					From:        event.AgentName,
-					Level:       "info",
-					Message:     text,
-				})
 			}
 		}
 	}
@@ -110,7 +136,7 @@ func (h *OKXWatcherHandler) Execute(ctx context.Context, task *model.CronTask, e
 		msg, _ := schema.ConcatMessageStream(lastMessageStream)
 		_ = h.cronExecutionLogRepository.Create(ctx, &model.CronExecutionLog{
 			ExecutionID: execution.ID,
-			From:        "unknown",
+			From:        "agent",
 			Level:       "info",
 			Message:     msg.String(),
 		})

@@ -7,7 +7,7 @@ replace github.com/chromedp/chromedp v0.15.0 => ./pkg/chromedp-v0.15.0
 require (
 	github.com/chromedp/cdproto v0.0.0-20260321001828-e3e3800016bc
 	github.com/chromedp/chromedp v0.15.0
-	github.com/cloudwego/eino v0.7.13
+	github.com/cloudwego/eino v0.8.4
 	github.com/cloudwego/eino-ext/components/model/openai v0.1.10
 	github.com/gin-gonic/gin v1.12.0
 	github.com/gorilla/websocket v1.5.3
@@ -23,6 +23,7 @@ require (
 
 require (
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
+	github.com/bmatcuk/doublestar/v4 v4.10.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.15.0 // indirect

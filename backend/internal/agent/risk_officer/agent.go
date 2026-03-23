@@ -1,8 +1,7 @@
-package okx_watcher
+package risk_officer
 
 import (
 	"context"
-
 	_ "embed"
 
 	"github.com/PineappleBond/TradingEino/backend/internal/agent/tools"
@@ -14,10 +13,10 @@ import (
 	"github.com/cloudwego/eino/compose"
 )
 
-var okxWatcher adk.Agent
+var riskOfficer adk.Agent
 
-func OkxWatcher() adk.Agent {
-	return okxWatcher
+func RiskOfficer() adk.Agent {
+	return riskOfficer
 }
 
 //go:embed DESCRIPTION.md
@@ -29,9 +28,9 @@ var SOUL string
 func Init(ctx context.Context, svcCtx *svc.ServiceContext, subAgents ...adk.Agent) error {
 	var err error
 	baseTools := make([]tool.BaseTool, 0)
-	baseTools = append(baseTools, tools.NewOkxCandlesticksTool(svcCtx))
-	okxWatcher, err = deep.New(ctx, &deep.Config{
-		Name:        "OKXWatcher",
+	baseTools = append(baseTools, tools.NewOkxGetPositionsTool(svcCtx))
+	riskOfficer, err = deep.New(ctx, &deep.Config{
+		Name:        "RiskOfficer",
 		Description: DESCRIPTION,
 		ChatModel:   svcCtx.ChatModel,
 		Instruction: SOUL,
@@ -54,7 +53,7 @@ func Init(ctx context.Context, svcCtx *svc.ServiceContext, subAgents ...adk.Agen
 		Middlewares:                  nil,
 	})
 	if err != nil {
-		logger.Error(ctx, "InitOkxWatcher error", err)
+		logger.Error(ctx, "InitRiskOfficer error", err)
 	}
 	return err
 }

@@ -57,6 +57,7 @@ type (
 		UplRatio    okex.JSONFloat64    `json:"uplRatio"`
 		Lever       okex.JSONFloat64    `json:"lever"`
 		LiqPx       okex.JSONFloat64    `json:"liqPx,omitempty"`
+		BePx        okex.JSONFloat64    `json:"bePx,omitempty"`
 		Imr         okex.JSONFloat64    `json:"imr,omitempty"`
 		Margin      okex.JSONFloat64    `json:"margin,omitempty"`
 		MgnRatio    okex.JSONFloat64    `json:"mgnRatio"`
