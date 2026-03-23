@@ -33,21 +33,21 @@ func (l *gormLogger) LogMode(level gormlogger.LogLevel) gormlogger.Interface {
 // Info 打印 info 日志
 func (l *gormLogger) Info(ctx context.Context, msg string, args ...any) {
 	if l.logLevel >= gormlogger.Info {
-		l.logger.Infof(ctx, "[GORM] "+msg, args...)
+		l.logger.Info(ctx, "[GORM] "+msg, args...)
 	}
 }
 
 // Warn 打印 warning 日志
 func (l *gormLogger) Warn(ctx context.Context, msg string, args ...any) {
 	if l.logLevel >= gormlogger.Warn {
-		l.logger.Warnf(ctx, "[GORM] "+msg, args...)
+		l.logger.Warn(ctx, "[GORM] "+msg, args...)
 	}
 }
 
 // Error 打印 error 日志
 func (l *gormLogger) Error(ctx context.Context, msg string, args ...any) {
 	if l.logLevel >= gormlogger.Error {
-		l.logger.Errorf(ctx, "[GORM] "+msg, nil, args...)
+		l.logger.Error(ctx, "[GORM] "+msg, nil, args...)
 	}
 }
 

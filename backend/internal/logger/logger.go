@@ -7,10 +7,13 @@ import (
 	"log/slog"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/PineappleBond/TradingEino/backend/internal/config"
 )
+
+const goMod = "github.com/PineappleBond/TradingEino/backend/"
 
 // Logger wraps slog.Logger with additional stack trace support for errors
 type Logger struct {
@@ -115,91 +118,143 @@ func getStackTrace(skip int) string {
 }
 
 // getCallerInfo returns the file and line number of the caller, skipping logger internal frames
-func getCallerInfo(skip int) slog.Source {
-	var pcs [1]uintptr
-	n := runtime.Callers(skip, pcs[:]) // skip: Callers, getCallerInfo, Info/Debug/etc, logger method
-	if n == 0 {
-		return slog.Source{}
+func getCallerInfo(skip int) string {
+	pcs := [13]uintptr{}
+	// the third caller usually from gorm internal
+	l := runtime.Callers(skip, pcs[:])
+	frames := runtime.CallersFrames(pcs[:l])
+	for i := 0; i < l; i++ {
+		// second return value is "more", not "ok"
+		frame, _ := frames.Next()
+		shortFile := frame.File
+		if !strings.HasSuffix(frame.File, ".gen.go") && !strings.Contains(frame.File, "gorm.io") && !strings.Contains(frame.File, "go-sqlite3") {
+			split := strings.Split(shortFile, goMod)
+			if len(split) == 2 {
+				shortFile = split[1] + ":" + strconv.Itoa(frame.Line)
+			}
+			return shortFile
+		}
 	}
 
-	frame, _ := runtime.CallersFrames(pcs[:]).Next()
-
-	// Shorten the file path to just the relative path
-	shortFile := frame.File
-	idx := strings.LastIndex(frame.File, "/github.com/PineappleBond/TradingEino/")
-	if idx >= 0 {
-		shortFile = frame.File[idx+len("/github.com/PineappleBond/TradingEino/"):]
-	}
-
-	return slog.Source{
-		Function: frame.Function,
-		File:     shortFile,
-		Line:     frame.Line,
-	}
+	return ""
 }
 
 // Debug logs a debug message
 func (l *Logger) Debug(ctx context.Context, msg string, args ...any) {
 	if l.addSource {
-		args = append(args, "source", getCallerInfo(l.skipCallers))
+		for _, arg := range args {
+			msg += fmt.Sprintf(" %+v", arg)
+		}
+		l.inner.LogAttrs(ctx, slog.LevelDebug, msg, slog.Attr{
+			Key:   "source",
+			Value: slog.StringValue(getCallerInfo(l.skipCallers)),
+		})
+	} else {
+		l.inner.DebugContext(ctx, msg, args...)
 	}
-	l.inner.DebugContext(ctx, msg, args...)
 }
 
 // Debugf logs a formatted debug message
 func (l *Logger) Debugf(ctx context.Context, format string, args ...any) {
 	if l.addSource {
-		args = append(args, "source", getCallerInfo(l.skipCallers))
+		msg := fmt.Sprintf(format, args...)
+		l.inner.LogAttrs(ctx, slog.LevelDebug, msg, slog.Attr{
+			Key:   "source",
+			Value: slog.StringValue(getCallerInfo(l.skipCallers)),
+		})
+	} else {
+		l.inner.DebugContext(ctx, fmt.Sprintf(format, args...))
 	}
-	l.inner.DebugContext(ctx, fmt.Sprintf(format, args...))
 }
 
 // Info logs an info message
 func (l *Logger) Info(ctx context.Context, msg string, args ...any) {
 	if l.addSource {
-		args = append(args, "source", getCallerInfo(l.skipCallers))
+		for _, arg := range args {
+			msg += fmt.Sprintf(" %+v", arg)
+		}
+		l.inner.LogAttrs(ctx, slog.LevelInfo, msg, slog.Attr{
+			Key:   "source",
+			Value: slog.StringValue(getCallerInfo(l.skipCallers)),
+		})
+	} else {
+		l.inner.InfoContext(ctx, msg, args...)
 	}
-	l.inner.InfoContext(ctx, msg, args...)
 }
 
 // Infof logs a formatted info message
 func (l *Logger) Infof(ctx context.Context, format string, args ...any) {
 	if l.addSource {
-		args = append(args, "source", getCallerInfo(l.skipCallers))
+		msg := fmt.Sprintf(format, args...)
+		l.inner.LogAttrs(ctx, slog.LevelInfo, msg, slog.Attr{
+			Key:   "source",
+			Value: slog.StringValue(getCallerInfo(l.skipCallers)),
+		})
+	} else {
+		l.inner.InfoContext(ctx, fmt.Sprintf(format, args...))
 	}
-	l.inner.InfoContext(ctx, fmt.Sprintf(format, args...))
 }
 
 // Warn logs a warning message
 func (l *Logger) Warn(ctx context.Context, msg string, args ...any) {
 	if l.addSource {
-		args = append(args, "source", getCallerInfo(l.skipCallers))
+		for _, arg := range args {
+			msg += fmt.Sprintf(" %+v", arg)
+		}
+		l.inner.LogAttrs(ctx, slog.LevelWarn, msg, slog.Attr{
+			Key:   "source",
+			Value: slog.StringValue(getCallerInfo(l.skipCallers)),
+		})
+	} else {
+		l.inner.WarnContext(ctx, msg, args...)
 	}
-	l.inner.WarnContext(ctx, msg, args...)
 }
 
 // Warnf logs a formatted warning message
 func (l *Logger) Warnf(ctx context.Context, format string, args ...any) {
 	if l.addSource {
-		args = append(args, "source", getCallerInfo(l.skipCallers))
+		msg := fmt.Sprintf(format, args...)
+		l.inner.LogAttrs(ctx, slog.LevelWarn, msg, slog.Attr{
+			Key:   "source",
+			Value: slog.StringValue(getCallerInfo(l.skipCallers)),
+		})
+	} else {
+		l.inner.WarnContext(ctx, fmt.Sprintf(format, args...))
 	}
-	l.inner.WarnContext(ctx, fmt.Sprintf(format, args...))
 }
 
 // Error logs an error message with stack trace
 func (l *Logger) Error(ctx context.Context, msg string, err error, args ...any) {
+	for _, arg := range args {
+		msg += fmt.Sprintf(" %+v", arg)
+	}
+	errString := ""
 	if err != nil {
-		args = append(args, "error", err.Error(), "stack_trace", getStackTrace(2))
+		errString = err.Error()
 	}
-	if l.addSource {
-		args = append(args, "source", getCallerInfo(l.skipCallers))
-	}
-	l.inner.ErrorContext(ctx, msg, args...)
+	l.inner.LogAttrs(ctx, slog.LevelError, msg, slog.Attr{
+		Key:   "source",
+		Value: slog.StringValue(getCallerInfo(l.skipCallers)),
+	}, slog.Attr{
+		Key:   "error",
+		Value: slog.StringValue(errString),
+	})
 }
 
 // Errorf logs a formatted error message with stack trace
 func (l *Logger) Errorf(ctx context.Context, format string, err error, args ...any) {
-	l.Error(ctx, fmt.Sprintf(format, args...), err)
+	msg := fmt.Sprintf(format, args...)
+	errString := ""
+	if err != nil {
+		errString = err.Error()
+	}
+	l.inner.LogAttrs(ctx, slog.LevelError, msg, slog.Attr{
+		Key:   "source",
+		Value: slog.StringValue(getCallerInfo(l.skipCallers)),
+	}, slog.Attr{
+		Key:   "error",
+		Value: slog.StringValue(errString),
+	})
 }
 
 // With creates a new Logger with additional context

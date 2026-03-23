@@ -5,9 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/PineappleBond/TradingEino/backend/internal/config"
 	"github.com/PineappleBond/TradingEino/backend/internal/logger"
+	"github.com/PineappleBond/TradingEino/backend/internal/service/scheduler"
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
 )
 
@@ -40,5 +42,15 @@ func main() {
 
 	_ = svcCtx
 
+	sch := scheduler.NewScheduler(svcCtx)
+	sch.RegisterDefaultHandlers()
+	err = sch.Start()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to start scheduler: %v\n", err)
+		os.Exit(1)
+	}
+
 	logger.Info(ctx, "server initialized successfully")
+
+	time.Sleep(time.Hour * 24 * 360)
 }
