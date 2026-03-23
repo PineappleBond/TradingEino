@@ -70,3 +70,8 @@ type StartTaskRequest struct {
 	ID                uint   `uri:"id" binding:"required,min=1"`
 	NextExecutionTime string `json:"next_execution_time" binding:"required"`
 }
+
+// StartTaskBody 启动任务请求体
+type StartTaskBody struct {
+	NextExecutionTime string `json:"next_execution_time" binding:"required"`
+}

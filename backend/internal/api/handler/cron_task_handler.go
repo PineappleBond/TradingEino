@@ -322,32 +322,33 @@ func (h *CronTaskHandler) DisableTask(ctx *gin.Context) {
 // @Failure 404 {object} response.Response[any]
 // @Router /api/crontask/{id}/start [post]
 func (h *CronTaskHandler) StartTask(ctx *gin.Context) {
-	var req request.StartTaskRequest
-	if err := ctx.ShouldBindUri(&req); err != nil {
+	var uriReq request.TaskActionRequest
+	if err := ctx.ShouldBindUri(&uriReq); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.Error[any](response.CodeParameterFormatError, err.Error()))
 		return
 	}
 
-	if err := ctx.ShouldBindJSON(&req); err != nil {
+	var bodyReq request.StartTaskBody
+	if err := ctx.ShouldBindJSON(&bodyReq); err != nil {
 		ctx.JSON(http.StatusBadRequest, response.Error[any](response.CodeParameterFormatError, err.Error()))
 		return
 	}
 
-	task, err := h.repository.GetByID(ctx.Request.Context(), req.ID)
+	task, err := h.repository.GetByID(ctx.Request.Context(), uriReq.ID)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, response.Error[any](response.CodeResourceNotFound, "task not found"))
 		return
 	}
 
 	// Parse next execution time
-	nextExecTime, err := time.Parse("2006-01-02 15:04:05", req.NextExecutionTime)
+	nextExecTime, err := time.Parse("2006-01-02 15:04:05", bodyReq.NextExecutionTime)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, response.Error[any](response.CodeParameterFormatError, "invalid time format, use YYYY-MM-DD HH:MM:SS"))
 		return
 	}
 
 	// Update next execution time and status
-	if err := h.repository.UpdateNextExecution(ctx.Request.Context(), req.ID, nextExecTime); err != nil {
+	if err := h.repository.UpdateNextExecution(ctx.Request.Context(), uriReq.ID, nextExecTime); err != nil {
 		ctx.JSON(http.StatusInternalServerError, response.Error[any](response.CodeDatabaseError, err.Error()))
 		return
 	}
