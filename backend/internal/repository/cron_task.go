@@ -191,3 +191,73 @@ func (r *CronTaskRepository) GetDueTasksWithLock(ctx context.Context, now time.T
 		Find(&tasks).Error
 	return tasks, err
 }
+
+// GetPagedTasks 分页获取任务列表，支持状态和类型过滤
+func (r *CronTaskRepository) GetPagedTasks(ctx context.Context, page, pageSize int, status *model.TaskStatus, taskType *model.TaskType, enabled *bool) ([]*model.CronTask, int64, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+
+	query := r.svcCtx.DB.WithContext(ctx).Model(&model.CronTask{})
+
+	// Apply filters
+	if status != nil {
+		query = query.Where("status = ?", *status)
+	}
+	if taskType != nil {
+		query = query.Where("type = ?", *taskType)
+	}
+	if enabled != nil {
+		query = query.Where("enabled = ?", *enabled)
+	}
+
+	// Get total count
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get paged data
+	var tasks []*model.CronTask
+	offset := (page - 1) * pageSize
+	err := query.Order("created_at DESC").Offset(offset).Limit(pageSize).Find(&tasks).Error
+	return tasks, total, err
+}
+
+// GetPagedTasksWithLock 分页获取任务列表并加行级锁
+func (r *CronTaskRepository) GetPagedTasksWithLock(ctx context.Context, page, pageSize int, status *model.TaskStatus, taskType *model.TaskType, enabled *bool) ([]*model.CronTask, int64, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+
+	query := r.svcCtx.DB.WithContext(ctx).Model(&model.CronTask{}).Clauses(clause.Locking{Strength: "SHARE"})
+
+	// Apply filters
+	if status != nil {
+		query = query.Where("status = ?", *status)
+	}
+	if taskType != nil {
+		query = query.Where("type = ?", *taskType)
+	}
+	if enabled != nil {
+		query = query.Where("enabled = ?", *enabled)
+	}
+
+	// Get total count
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get paged data
+	var tasks []*model.CronTask
+	offset := (page - 1) * pageSize
+	err := query.Order("created_at DESC").Offset(offset).Limit(pageSize).Find(&tasks).Error
+	return tasks, total, err
+}

@@ -143,3 +143,51 @@ func (r *CronExecutionRepository) GetOverdueRunning(ctx context.Context, timeout
 		Find(&executions).Error
 	return executions, err
 }
+
+// GetPagedExecutions 分页获取执行记录列表，支持任务 ID、状态、时间范围过滤
+func (r *CronExecutionRepository) GetPagedExecutions(ctx context.Context, page, pageSize int, taskID *uint, status *model.ExecutionStatus, startTime, endTime *time.Time) ([]*model.CronExecution, int64, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+
+	query := r.svcCtx.DB.WithContext(ctx).Model(&model.CronExecution{})
+
+	// Apply filters
+	if taskID != nil {
+		query = query.Where("task_id = ?", *taskID)
+	}
+	if status != nil {
+		query = query.Where("status = ?", *status)
+	}
+	if startTime != nil {
+		query = query.Where("scheduled_at >= ?", *startTime)
+	}
+	if endTime != nil {
+		query = query.Where("scheduled_at <= ?", *endTime)
+	}
+
+	// Get total count
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get paged data
+	var executions []*model.CronExecution
+	offset := (page - 1) * pageSize
+	err := query.Order("scheduled_at DESC").Offset(offset).Limit(pageSize).Find(&executions).Error
+	return executions, total, err
+}
+
+// GetByExecutionID 根据 ID 获取单条执行记录（带关联日志）
+func (r *CronExecutionRepository) GetByExecutionID(ctx context.Context, id uint) (*model.CronExecution, error) {
+	var execution model.CronExecution
+	err := r.svcCtx.DB.WithContext(ctx).First(&execution, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &execution, nil
+}

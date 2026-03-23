@@ -99,3 +99,38 @@ func (r *CronExecutionLogRepository) GetLogsByFrom(ctx context.Context, from str
 	err := query.Order("created_at DESC").Find(&logs).Error
 	return logs, err
 }
+
+// GetPagedLogs 分页获取日志记录，支持执行 ID、级别、来源过滤
+func (r *CronExecutionLogRepository) GetPagedLogs(ctx context.Context, page, pageSize int, executionID *uint, level *string, from *string) ([]*model.CronExecutionLog, int64, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+
+	query := r.svcCtx.DB.WithContext(ctx).Model(&model.CronExecutionLog{})
+
+	// Apply filters
+	if executionID != nil {
+		query = query.Where("execution_id = ?", *executionID)
+	}
+	if level != nil {
+		query = query.Where("level = ?", *level)
+	}
+	if from != nil {
+		query = query.Where("`from` = ?", *from)
+	}
+
+	// Get total count
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Get paged data
+	var logs []*model.CronExecutionLog
+	offset := (page - 1) * pageSize
+	err := query.Order("created_at DESC").Offset(offset).Limit(pageSize).Find(&logs).Error
+	return logs, total, err
+}
