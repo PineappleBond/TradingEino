@@ -1,0 +1,65 @@
+# =============================================================================
+# TradingEino Backend Configuration
+# =============================================================================
+# 配置文件说明:
+# - 本文件为配置示例文件，实际使用时请复制为 config.yaml 并修改相应值
+# - 配置项可以通过环境变量覆盖，格式：TRADINGEINO_<SECTION>_<KEY>
+#   例如：TRADINGEINO_LOGGER_LEVEL=debug
+# - 支持 YAML 格式，缩进使用空格（推荐 2 空格）
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Logger Configuration
+# -----------------------------------------------------------------------------
+# 日志配置，控制应用程序的日志行为
+logger:
+  # 日志级别：控制最低输出级别
+  # 可选值: debug, info, warn, error
+  # 说明:
+  #   - debug: 输出所有日志，包括详细调试信息
+  #   - info:  输出一般信息（推荐生产环境）
+  #   - warn:  仅输出警告和错误
+  #   - error: 仅输出错误信息
+  # 环境变量: TRADINGEINO_LOGGER_LEVEL
+  level: info
+
+  # 日志输出格式
+  # 可选值：json, text
+  # 说明:
+  #   - json: JSON 格式，便于日志收集和分析（推荐）
+  #   - text: 文本格式，便于本地开发调试
+  # 环境变量: TRADINGEINO_LOGGER_FORMAT
+  format: json
+
+  # 日志输出目标
+  # 可选值：stdout, stderr, file
+  # 说明:
+  #   - stdout: 标准输出（推荐，便于容器化部署）
+  #   - stderr: 错误输出
+  #   - file:  输出到文件（需同时配置 file_path）
+  # 环境变量: TRADINGEINO_LOGGER_OUTPUT
+  output: stdout
+
+  # 日志文件路径
+  # 仅在 output 为 "file" 时生效
+  # 说明：路径相对于应用运行目录，建议使用绝对路径
+  # 环境变量：TRADINGEINO_LOGGER_FILE_PATH
+  # file_path: /var/log/tradingeino/app.log
+
+  # 是否添加源代码位置信息
+  # 可选值：true, false
+  # 说明：开启后会在日志中输出文件名和行号，便于定位问题
+  # 环境变量：TRADINGEINO_LOGGER_ADD_SOURCE
+  add_source: true
+
+# =============================================================================
+# 示例：通过环境变量覆盖配置
+# =============================================================================
+# 在终端中执行:
+#   export TRADINGEINO_LOGGER_LEVEL=debug
+#   export TRADINGEINO_LOGGER_OUTPUT=stderr
+#   ./server
+#
+# 或者直接在一行中:
+#   TRADINGEINO_LOGGER_LEVEL=debug TRADINGEINO_LOGGER_OUTPUT=stderr ./server
+# =============================================================================

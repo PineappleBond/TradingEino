@@ -28,5 +28,26 @@ go.work.sum
 .env
 
 # Editor/IDE
-# .idea/
+.idea/
 # .vscode/
+
+# Download from github
+.downloads
+
+# config
+backend/config.yaml
+backend/etc/config.yaml
+
+# binary
+backend/main
+backend/server
+backend/cmd/server/main
+backend/cmd/server/server
+
+# data
+/data
+backend/data
+
+# logs
+backend/logs
+/logs
