@@ -14,12 +14,13 @@ import (
 
 // Logger wraps slog.Logger with additional stack trace support for errors
 type Logger struct {
-	inner     *slog.Logger
-	addSource bool
+	inner       *slog.Logger
+	addSource   bool
+	skipCallers int
 }
 
 // New creates a new Logger instance with JSON output
-func New(cfg config.LoggerConfig) *Logger {
+func New(cfg config.LoggerConfig, skipCallers int) *Logger {
 	var output io.Writer
 
 	switch cfg.Output {
@@ -50,8 +51,9 @@ func New(cfg config.LoggerConfig) *Logger {
 	handler := slog.NewJSONHandler(output, opts)
 
 	return &Logger{
-		inner:     slog.New(handler),
-		addSource: cfg.AddSource,
+		inner:       slog.New(handler),
+		addSource:   cfg.AddSource,
+		skipCallers: skipCallers,
 	}
 }
 
@@ -113,9 +115,9 @@ func getStackTrace(skip int) string {
 }
 
 // getCallerInfo returns the file and line number of the caller, skipping logger internal frames
-func getCallerInfo() slog.Source {
+func getCallerInfo(skip int) slog.Source {
 	var pcs [1]uintptr
-	n := runtime.Callers(4, pcs[:]) // skip: Callers, getCallerInfo, Info/Debug/etc, logger method
+	n := runtime.Callers(skip, pcs[:]) // skip: Callers, getCallerInfo, Info/Debug/etc, logger method
 	if n == 0 {
 		return slog.Source{}
 	}
@@ -139,7 +141,7 @@ func getCallerInfo() slog.Source {
 // Debug logs a debug message
 func (l *Logger) Debug(ctx context.Context, msg string, args ...any) {
 	if l.addSource {
-		args = append(args, "source", getCallerInfo())
+		args = append(args, "source", getCallerInfo(l.skipCallers))
 	}
 	l.inner.DebugContext(ctx, msg, args...)
 }
@@ -147,7 +149,7 @@ func (l *Logger) Debug(ctx context.Context, msg string, args ...any) {
 // Debugf logs a formatted debug message
 func (l *Logger) Debugf(ctx context.Context, format string, args ...any) {
 	if l.addSource {
-		args = append(args, "source", getCallerInfo())
+		args = append(args, "source", getCallerInfo(l.skipCallers))
 	}
 	l.inner.DebugContext(ctx, fmt.Sprintf(format, args...))
 }
@@ -155,7 +157,7 @@ func (l *Logger) Debugf(ctx context.Context, format string, args ...any) {
 // Info logs an info message
 func (l *Logger) Info(ctx context.Context, msg string, args ...any) {
 	if l.addSource {
-		args = append(args, "source", getCallerInfo())
+		args = append(args, "source", getCallerInfo(l.skipCallers))
 	}
 	l.inner.InfoContext(ctx, msg, args...)
 }
@@ -163,7 +165,7 @@ func (l *Logger) Info(ctx context.Context, msg string, args ...any) {
 // Infof logs a formatted info message
 func (l *Logger) Infof(ctx context.Context, format string, args ...any) {
 	if l.addSource {
-		args = append(args, "source", getCallerInfo())
+		args = append(args, "source", getCallerInfo(l.skipCallers))
 	}
 	l.inner.InfoContext(ctx, fmt.Sprintf(format, args...))
 }
@@ -171,7 +173,7 @@ func (l *Logger) Infof(ctx context.Context, format string, args ...any) {
 // Warn logs a warning message
 func (l *Logger) Warn(ctx context.Context, msg string, args ...any) {
 	if l.addSource {
-		args = append(args, "source", getCallerInfo())
+		args = append(args, "source", getCallerInfo(l.skipCallers))
 	}
 	l.inner.WarnContext(ctx, msg, args...)
 }
@@ -179,7 +181,7 @@ func (l *Logger) Warn(ctx context.Context, msg string, args ...any) {
 // Warnf logs a formatted warning message
 func (l *Logger) Warnf(ctx context.Context, format string, args ...any) {
 	if l.addSource {
-		args = append(args, "source", getCallerInfo())
+		args = append(args, "source", getCallerInfo(l.skipCallers))
 	}
 	l.inner.WarnContext(ctx, fmt.Sprintf(format, args...))
 }
@@ -190,7 +192,7 @@ func (l *Logger) Error(ctx context.Context, msg string, err error, args ...any) 
 		args = append(args, "error", err.Error(), "stack_trace", getStackTrace(2))
 	}
 	if l.addSource {
-		args = append(args, "source", getCallerInfo())
+		args = append(args, "source", getCallerInfo(l.skipCallers))
 	}
 	l.inner.ErrorContext(ctx, msg, args...)
 }
@@ -220,7 +222,7 @@ var defaultLogger = New(config.LoggerConfig{
 	Format:    "json",
 	Output:    "stdout",
 	AddSource: true,
-})
+}, 4)
 
 // SetDefault sets the default logger
 func SetDefault(logger *Logger) {

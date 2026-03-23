@@ -25,9 +25,16 @@ type LoggerConfig struct {
 	AddSource bool `mapstructure:"add_source"`
 }
 
+// DBConfig holds db configuration
+type DBConfig struct {
+	Type   string `mapstructure:"type"` // support sqlite only
+	DBPath string `mapstructure:"db_path"`
+}
+
 // Config holds all configuration for the application
 type Config struct {
 	Logger LoggerConfig `mapstructure:"logger"`
+	DB     DBConfig     `mapstructure:"db"`
 }
 
 // DefaultConfig returns a Config with default values
@@ -38,6 +45,10 @@ func DefaultConfig() *Config {
 			Format:    "json",
 			Output:    "stdout",
 			AddSource: true,
+		},
+		DB: DBConfig{
+			Type:   "sqlite",
+			DBPath: "./data/TradingEino.db",
 		},
 	}
 }
@@ -53,6 +64,8 @@ func Load(configPath string) (*Config, error) {
 	v.SetDefault("logger.format", "json")
 	v.SetDefault("logger.output", "stdout")
 	v.SetDefault("logger.add_source", true)
+	v.SetDefault("db.type", "sqlite")
+	v.SetDefault("db.db_path", "./data/TradingEino.db")
 
 	// Configure file reading
 	if configPath != "" {

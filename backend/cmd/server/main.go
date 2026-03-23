@@ -8,6 +8,7 @@ import (
 
 	"github.com/PineappleBond/TradingEino/backend/internal/config"
 	"github.com/PineappleBond/TradingEino/backend/internal/logger"
+	"github.com/PineappleBond/TradingEino/backend/internal/svc"
 )
 
 var configPath = flag.String("c", "etc/config.yaml", "path to config file")
@@ -23,7 +24,7 @@ func main() {
 	}
 
 	// Create and set default logger
-	log := logger.New(cfg.Logger)
+	log := logger.New(cfg.Logger, 4)
 	logger.SetDefault(log)
 	logger.SetGlobalDefault(log)
 
@@ -35,6 +36,10 @@ func main() {
 		"log_format", cfg.Logger.Format,
 		"log_output", cfg.Logger.Output,
 	)
+
+	svcCtx := svc.NewServiceContext(*cfg)
+
+	_ = svcCtx
 
 	logger.Info(ctx, "server initialized successfully")
 }

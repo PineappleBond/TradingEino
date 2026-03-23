@@ -21,7 +21,7 @@ func TestNew(t *testing.T) {
 		AddSource: true,
 	}
 
-	logger := New(cfg)
+	logger := New(cfg, 4)
 	if logger == nil {
 		t.Fatal("New() returned nil")
 	}
@@ -64,7 +64,7 @@ func TestLogger_Debug(t *testing.T) {
 		AddSource: false,
 	}
 
-	logger := New(cfg)
+	logger := New(cfg, 4)
 	logger.inner = slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	}))
@@ -87,7 +87,7 @@ func TestLogger_Info(t *testing.T) {
 		AddSource: false,
 	}
 
-	logger := New(cfg)
+	logger := New(cfg, 4)
 	logger.inner = slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}))
@@ -110,7 +110,7 @@ func TestLogger_Warn(t *testing.T) {
 		AddSource: false,
 	}
 
-	logger := New(cfg)
+	logger := New(cfg, 4)
 	logger.inner = slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{
 		Level: slog.LevelWarn,
 	}))
@@ -133,7 +133,7 @@ func TestLogger_Error_WithStackTrace(t *testing.T) {
 		AddSource: false,
 	}
 
-	logger := New(cfg)
+	logger := New(cfg, 4)
 	logger.inner = slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{
 		Level: slog.LevelError,
 	}))
@@ -176,7 +176,7 @@ func TestLogger_Errorf(t *testing.T) {
 		AddSource: false,
 	}
 
-	logger := New(cfg)
+	logger := New(cfg, 4)
 	logger.inner = slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{
 		Level: slog.LevelError,
 	}))
@@ -206,7 +206,7 @@ func TestLogger_With(t *testing.T) {
 		AddSource: false,
 	}
 
-	logger := New(cfg)
+	logger := New(cfg, 4)
 	logger.inner = slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	}))
@@ -238,7 +238,7 @@ func TestLogger_LevelFiltering(t *testing.T) {
 		AddSource: false,
 	}
 
-	logger := New(cfg)
+	logger := New(cfg, 4)
 	logger.inner = slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{
 		Level: slog.LevelWarn,
 	}))
@@ -306,7 +306,7 @@ func TestNew_WithStderr(t *testing.T) {
 		AddSource: false,
 	}
 
-	logger := New(cfg)
+	logger := New(cfg, 4)
 	if logger == nil {
 		t.Fatal("New() with stderr returned nil")
 	}
@@ -322,7 +322,7 @@ func TestNew_WithFile(t *testing.T) {
 		AddSource: false,
 	}
 
-	logger := New(cfg)
+	logger := New(cfg, 4)
 	if logger == nil {
 		t.Fatal("New() with file returned nil")
 	}
@@ -342,7 +342,7 @@ func TestNew_WithInvalidFilePath(t *testing.T) {
 		AddSource: false,
 	}
 
-	logger := New(cfg)
+	logger := New(cfg, 4)
 	if logger == nil {
 		t.Fatal("New() with invalid file path returned nil")
 	}
@@ -361,7 +361,7 @@ func TestWithGroup(t *testing.T) {
 		AddSource: false,
 	}
 
-	logger := New(cfg)
+	logger := New(cfg, 4)
 	logger.inner = slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	}))
@@ -391,7 +391,7 @@ func TestLogger_OutputToWriter(t *testing.T) {
 		AddSource: false,
 	}
 
-	logger := New(cfg)
+	logger := New(cfg, 4)
 	logger.inner = slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	}))
