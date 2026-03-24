@@ -27,9 +27,9 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **EXEC-01**: okx-place-order-tool supports limit and market order types
 - [ ] **EXEC-02**: okx-cancel-order-tool cancels pending orders
 - [ ] **EXEC-03**: okx-get-order-tool queries order status
-- [ ] **EXEC-04**: Executor Agent with Level 1 autonomy (explicit commands only)
-- [ ] **EXEC-05**: OKX native sl_tp algo orders for stop-loss/take-profit
-- [ ] **EXEC-06**: Order response validation (OKX sCode/sMsg field checks)
+- [x] **EXEC-04**: Executor Agent with Level 1 autonomy (explicit commands only)
+- [x] **EXEC-05**: OKX native sl_tp algo orders for stop-loss/take-profit
+- [x] **EXEC-06**: Order response validation (OKX sCode/sMsg field checks)
 
 ### RAG Memory
 
@@ -95,9 +95,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXEC-01 | Phase 3 | Pending |
 | EXEC-02 | Phase 3 | Pending |
 | EXEC-03 | Phase 3 | Pending |
-| EXEC-04 | Phase 3 | Pending |
-| EXEC-05 | Phase 3 | Pending |
-| EXEC-06 | Phase 3 | Pending |
+| EXEC-04 | Phase 3 | Complete |
+| EXEC-05 | Phase 3 | Complete |
+| EXEC-06 | Phase 3 | Complete |
 | RAG-01 | Phase 4 | Pending |
 | RAG-02 | Phase 4 | Pending |
 | RAG-03 | Phase 4 | Pending |
@@ -108,8 +108,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 - v1 requirements: 20 total
 - Mapped to phases: 20
 - Unmapped: 0 ✓
-- Complete: 5/20 (Phase 1 complete)
+- Complete: 11/20 (Phase 1 + Phase 3 Plans 01-03 complete)
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-03-24 - Phase 1 complete (FOUND-01 through FOUND-05)*
+*Last updated: 2026-03-24 - Phase 1 complete, Phase 3 Plans 01-03 complete (EXEC-04, EXEC-05, EXEC-06)*
