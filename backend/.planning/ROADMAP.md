@@ -75,7 +75,13 @@
 5. Stop-loss/take-profit orders use OKX native `sl_tp` algo order type
 6. Order responses validate OKX `sCode`/`sMsg` fields (detect silent failures)
 
-**Plans:** TBD
+**Plans:** 4 plans
+
+**Plans:**
+- [ ] 03-execution-automation-01-PLAN.md — P0 核心订单工具（下单、撤单、查询）
+- [ ] 03-execution-automation-02-PLAN.md — P0 止盈止损工具（附加 SL/TP、下单带 SL/TP）
+- [ ] 03-execution-automation-03-PLAN.md — Executor Agent（Level 1 自主性）
+- [ ] 03-execution-automation-04-PLAN.md — P1 批量操作工具（批量下单、批量撤单、历史查询、平仓）
 
 ---
 
@@ -104,7 +110,7 @@
 |-------|----------------|--------|-----------|
 | 1. Foundation & Safety | 3/3 | Complete | 01-foundation-safety-01, 01-foundation-safety-02, 01-foundation-safety-03 |
 | 2. Analysis Layer Completion | 0/4 | Not started | - |
-| 3. Execution Automation | 0/6 | Not started | - |
+| 3. Execution Automation | 0/4 | Planned | - |
 | 4. RAG Decision Memory | 0/5 | Not started | - |
 
 ---
@@ -152,3 +158,4 @@
 *Roadmap created: 2026-03-24*
 *Roadmap updated: 2026-03-24 - Phase 1 plans created (3 plans in 2 waves)*
 *Roadmap updated: 2026-03-24 - Phase 1 complete (3/3 plans)*
+*Roadmap updated: 2026-03-24 - Phase 3 plans created (4 plans in 3 waves)*
