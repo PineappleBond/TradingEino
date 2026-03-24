@@ -102,7 +102,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Safety | 1/3 | In Progress | 01-foundation-safety-02 |
+| 1. Foundation & Safety | 2/3 | In Progress | 01-foundation-safety-01, 01-foundation-safety-02 |
 | 2. Analysis Layer Completion | 0/4 | Not started | - |
 | 3. Execution Automation | 0/6 | Not started | - |
 | 4. RAG Decision Memory | 0/5 | Not started | - |
