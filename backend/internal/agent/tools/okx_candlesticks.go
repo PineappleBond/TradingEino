@@ -146,7 +146,7 @@ func (c *OkxCandlesticksTool) InvokableRun(ctx context.Context, argumentsInJSON 
 func NewOkxCandlesticksTool(svcCtx *svc.ServiceContext) *OkxCandlesticksTool {
 	return &OkxCandlesticksTool{
 		svcCtx:  svcCtx,
-		limiter: rate.NewLimiter(rate.Every(time.Second/10), 1), // OKX API 限流：10 次/秒
+		limiter: rate.NewLimiter(rate.Every(100*time.Millisecond), 2), // 10 req/s for Market endpoint (burst=2)
 	}
 }
 
