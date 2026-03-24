@@ -2,11 +2,16 @@ package handlers
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
+	"text/template"
 	"time"
 
 	"github.com/PineappleBond/TradingEino/backend/internal/agent"
+	"github.com/PineappleBond/TradingEino/backend/internal/logger"
 	"github.com/PineappleBond/TradingEino/backend/internal/model"
 	"github.com/PineappleBond/TradingEino/backend/internal/repository"
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
@@ -14,20 +19,43 @@ import (
 	"github.com/cloudwego/eino/schema"
 )
 
+//go:embed templates/OKXWatcherSystem.md
+var OKXWatcherSystemTemplateText string
+
+//go:embed templates/OKXWatcherUser.md
+var OKXWatcherUserTemplateText string
+
 type OKXWatcherHandler struct {
 	svcCtx                     *svc.ServiceContext
 	cronTaskRepository         *repository.CronTaskRepository
 	cronExecutionRepository    *repository.CronExecutionRepository
 	cronExecutionLogRepository *repository.CronExecutionLogRepository
+
+	okxWatcherSystemTemplate *template.Template
+	okxWatcherUserTemplate   *template.Template
 }
 
 // NewOKXWatcherHandler 创建示例执行器
 func NewOKXWatcherHandler(svcCtx *svc.ServiceContext) *OKXWatcherHandler {
+	okxWatcherSystemTemplate, err := template.New("OKXWatcherSystem").Parse(OKXWatcherSystemTemplateText)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to parse okxWatcherSystemTemplate: %v\n", err)
+		os.Exit(1)
+		return nil
+	}
+	okxWatcherUserTemplate, err := template.New("OKXWatcherUser").Parse(OKXWatcherUserTemplateText)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to parse okxWatcherUserTemplate: %v\n", err)
+		os.Exit(1)
+		return nil
+	}
 	return &OKXWatcherHandler{
 		svcCtx:                     svcCtx,
 		cronTaskRepository:         repository.NewCronTaskRepository(svcCtx),
 		cronExecutionRepository:    repository.NewCronExecutionRepository(svcCtx),
 		cronExecutionLogRepository: repository.NewCronExecutionLogRepository(svcCtx),
+		okxWatcherSystemTemplate:   okxWatcherSystemTemplate,
+		okxWatcherUserTemplate:     okxWatcherUserTemplate,
 	}
 }
 
@@ -107,13 +135,50 @@ func (h *OKXWatcherHandler) Execute(ctx context.Context, task *model.CronTask, e
 		lastMessageStream *schema.StreamReader[adk.Message]
 	)
 
-	queryText := fmt.Sprintf("现在时间是`%s`, 开始对`%s`进行分析.\n> 如果有必要，你不必询问我，你可以调度不同维度的 Agent 共同讨论问题，最终整理你们的建议并告知原因.", time.Now().Format("2006 年 01 月 02 日 15 时 04 分"), okxWatcherRawModel.Symbol)
-	iter := runner.Query(ctx, queryText)
+	//以前是这样写的
+	//queryText := fmt.Sprintf("现在时间是`%s`, 开始对`%s`进行分析.\n> 如果有必要，你不必询问我，你可以调度不同维度的 Agent 共同讨论问题，最终整理你们的建议并告知原因.", time.Now().Format("2006 年 01 月 02 日 15 时 04 分"), okxWatcherRawModel.Symbol)
+	//iter := runner.Query(ctx, queryText)
+
+	promptMessages := make([]adk.Message, 0)
+	systemMessageTextWriter := &strings.Builder{}
+	userMessageTextWriter := &strings.Builder{}
+	localTimezone := "Asia/ShangHai"
+	location, err := time.LoadLocation("Local")
+	if err == nil {
+		localTimezone = location.String()
+	}
+	applyData := map[string]any{
+		"Symbol":   okxWatcherRawModel.Symbol,
+		"Now":      time.Now().Format("2006-01-02T15:04"),
+		"Timezone": localTimezone,
+	}
+	err = h.okxWatcherSystemTemplate.Execute(systemMessageTextWriter, applyData)
+	if err != nil {
+		logger.Error(ctx, "failed to execute okxWatcher system template: %v", err)
+		return err
+	}
+	err = h.okxWatcherUserTemplate.Execute(userMessageTextWriter, applyData)
+	if err != nil {
+		logger.Error(ctx, "failed to execute okxWatcher user template: %v", err)
+		return err
+	}
+	systemMessage := schema.SystemMessage(systemMessageTextWriter.String())
+	promptMessages = append(promptMessages, systemMessage)
+	userMessage := schema.UserMessage(userMessageTextWriter.String())
+	promptMessages = append(promptMessages, userMessage)
+
+	iter := runner.Run(ctx, promptMessages)
+	_ = h.cronExecutionLogRepository.Create(ctx, &model.CronExecutionLog{
+		ExecutionID: execution.ID,
+		From:        "system",
+		Level:       "info",
+		Message:     systemMessage.Content,
+	})
 	_ = h.cronExecutionLogRepository.Create(ctx, &model.CronExecutionLog{
 		ExecutionID: execution.ID,
 		From:        "user",
 		Level:       "info",
-		Message:     queryText,
+		Message:     userMessage.Content,
 	})
 
 	for {
