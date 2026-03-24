@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -61,10 +62,13 @@ func main() {
 
 	serve := server.NewServer(svcCtx)
 
-	if err := serve.Start(); err != nil {
-		logger.Error(ctx, "failed to start server", err)
-		os.Exit(1)
-	}
+	// Start HTTP server in a goroutine (ListenAndServe is blocking)
+	go func() {
+		if err := serve.Start(); err != nil && err != http.ErrServerClosed {
+			logger.Error(ctx, "failed to start server", err)
+			os.Exit(1)
+		}
+	}()
 
 	// Setup signal handling for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
@@ -99,10 +103,10 @@ func main() {
 		logger.Error(ctx, "failed to close database", err)
 	}
 
-	// 5. Close logger
-	if err := logger.Close(); err != nil {
-		logger.Error(ctx, "failed to close logger", err)
-	}
-
+	// 5. Close logger (must be last to allow logging during shutdown)
 	logger.Info(ctx, "graceful shutdown completed")
+
+	if err := logger.Close(); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to close logger: %v\n", err)
+	}
 }
