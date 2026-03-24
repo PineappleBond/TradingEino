@@ -22,7 +22,7 @@ awaiting: user response
 
 ### 1. 冷启动测试 - 服务启动与 Agent 初始化
 expected: 杀死现有服务，清除临时状态，从头启动应用。服务启动无错误，Agents 初始化成功，日志显示 OKXWatcher、RiskOfficer、SentimentAnalyst、Executor 均正常加载。
-result: [pending]
+result: [pass]
 
 ### 2. 下单工具 - okx-place-order 基本功能
 expected: 调用 okx-place-order 工具下达限价单或市价单。返回订单 ID、状态、sCode、sMsg。订单成功提交时返回 ordId 和 state=live。
@@ -75,9 +75,9 @@ result: [pending]
 ## Summary
 
 total: 13
-passed: 0
+passed: 1
 issues: 0
-pending: 13
+pending: 12
 skipped: 0
 
 ## Gaps
