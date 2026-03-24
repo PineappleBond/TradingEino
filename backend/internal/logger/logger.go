@@ -290,6 +290,11 @@ var defaultLogger = New(config.LoggerConfig{
 	AddSource: true,
 }, 4)
 
+// Close closes the global default logger
+func Close() error {
+	return defaultLogger.Close()
+}
+
 // SetDefault sets the default logger
 func SetDefault(logger *Logger) {
 	defaultLogger = logger

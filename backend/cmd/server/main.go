@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/PineappleBond/TradingEino/backend/internal/agent"
 	"github.com/PineappleBond/TradingEino/backend/internal/config"
@@ -63,4 +65,44 @@ func main() {
 		logger.Error(ctx, "failed to start server", err)
 		os.Exit(1)
 	}
+
+	// Setup signal handling for graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	logger.Info(ctx, "server started, waiting for shutdown signal")
+
+	// Wait for shutdown signal
+	<-sigChan
+	logger.Info(ctx, "shutdown signal received")
+
+	// Ordered shutdown: Server -> Scheduler -> Agents -> DB -> Logger
+
+	// 1. Stop HTTP server
+	if err := serve.Shutdown(ctx); err != nil {
+		logger.Error(ctx, "failed to shutdown server", err)
+	}
+
+	// 2. Stop scheduler
+	if err := sch.Stop(); err != nil {
+		logger.Error(ctx, "failed to stop scheduler", err)
+	}
+
+	// 3. Close agents
+	if err := agent.Agents().Close(); err != nil {
+		logger.Error(ctx, "failed to close agents", err)
+	}
+
+	// 4. Close database
+	db, _ := svcCtx.DB.DB()
+	if err := db.Close(); err != nil {
+		logger.Error(ctx, "failed to close database", err)
+	}
+
+	// 5. Close logger
+	if err := logger.Close(); err != nil {
+		logger.Error(ctx, "failed to close logger", err)
+	}
+
+	logger.Info(ctx, "graceful shutdown completed")
 }

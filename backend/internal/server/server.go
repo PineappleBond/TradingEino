@@ -1,6 +1,10 @@
 package server
 
 import (
+	"context"
+	"net/http"
+	"time"
+
 	"github.com/PineappleBond/TradingEino/backend/internal/api"
 	"github.com/PineappleBond/TradingEino/backend/internal/api/middleware"
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
@@ -10,6 +14,7 @@ import (
 type Server struct {
 	ServiceContext *svc.ServiceContext
 	Engine         *gin.Engine
+	httpServer     *http.Server
 }
 
 func NewServer(serviceContext *svc.ServiceContext) *Server {
@@ -26,12 +31,30 @@ func NewServer(serviceContext *svc.ServiceContext) *Server {
 	engine.Use(middleware.Cors(serviceContext))
 	// CORS middleware is applied in routes if needed
 	api.Routes(engine, serviceContext)
-	return &Server{
+
+	srv := &Server{
 		ServiceContext: serviceContext,
 		Engine:         engine,
 	}
+
+	// Create http.Server for graceful shutdown support
+	srv.httpServer = &http.Server{
+		Addr:    serviceContext.Config.Server.ListenOn,
+		Handler: engine,
+	}
+
+	return srv
 }
 
 func (s *Server) Start() error {
-	return s.Engine.Run(s.ServiceContext.Config.Server.ListenOn)
+	return s.httpServer.ListenAndServe()
+}
+
+// Shutdown gracefully stops the HTTP server with timeout
+func (s *Server) Shutdown(ctx context.Context) error {
+	// Create a timeout context for shutdown
+	shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	return s.httpServer.Shutdown(shutdownCtx)
 }
