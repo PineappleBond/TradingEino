@@ -20,11 +20,13 @@ type Logger struct {
 	inner       *slog.Logger
 	addSource   bool
 	skipCallers int
+	closer      io.Closer // closer holds the resource to close on shutdown
 }
 
 // New creates a new Logger instance with JSON output
 func New(cfg config.LoggerConfig, skipCallers int) *Logger {
 	var output io.Writer
+	var closer io.Closer
 
 	switch cfg.Output {
 	case "stderr":
@@ -38,6 +40,7 @@ func New(cfg config.LoggerConfig, skipCallers int) *Logger {
 				output = os.Stdout
 			} else {
 				output = f
+				closer = f // Save file handle for closing later
 			}
 		}
 	default:
@@ -57,6 +60,7 @@ func New(cfg config.LoggerConfig, skipCallers int) *Logger {
 		inner:       slog.New(handler),
 		addSource:   cfg.AddSource,
 		skipCallers: skipCallers,
+		closer:      closer,
 	}
 }
 
@@ -269,6 +273,14 @@ func (l *Logger) WithGroup(name string) *Logger {
 	return &Logger{
 		inner: l.inner.WithGroup(name),
 	}
+}
+
+// Close closes any resources held by the logger (e.g., file handles)
+func (l *Logger) Close() error {
+	if l.closer != nil {
+		return l.closer.Close()
+	}
+	return nil
 }
 
 // Global default logger
