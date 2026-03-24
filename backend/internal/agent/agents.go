@@ -21,43 +21,65 @@ type AgentsModel struct {
 	cancel           context.CancelFunc
 }
 
-var _agents *AgentsModel
+var (
+	agentsOnce sync.Once
+	_agents    *AgentsModel
+)
 
+// Agents returns the global AgentsModel instance
 func Agents() *AgentsModel {
 	return _agents
 }
 
-func InitAgents(svcCtx *svc.ServiceContext) error {
-	ctx, cancel := context.WithCancel(context.Background())
+// InitAgents initializes all agents with proper context propagation
+// Uses sync.Once to ensure single initialization
+func InitAgents(ctx context.Context, svcCtx *svc.ServiceContext) error {
+	var initErr error
+	agentsOnce.Do(func() {
+		// Derive child context from parent ctx (not context.Background())
+		ctx, cancel := context.WithCancel(ctx)
 
-	// 初始化子 Agent（普通 ChatModelAgent）
-	riskOfficerAgent, err := risk_officer.NewRiskOfficerAgent(ctx, svcCtx)
-	if err != nil {
-		cancel()
-		return err
-	}
+		// Initialize RiskOfficer agent (ChatModelAgent)
+		riskOfficerAgent, err := risk_officer.NewRiskOfficerAgent(ctx, svcCtx)
+		if err != nil {
+			initErr = err
+			cancel()
+			return
+		}
 
-	sentimentAnalystAgent, err := sentiment_analyst.NewSentimentAnalystAgent(ctx, svcCtx)
-	if err != nil {
-		cancel()
-		return err
-	}
+		// Initialize SentimentAnalyst agent (ChatModelAgent)
+		sentimentAnalystAgent, err := sentiment_analyst.NewSentimentAnalystAgent(ctx, svcCtx)
+		if err != nil {
+			initErr = err
+			cancel()
+			return
+		}
 
-	// 初始化顶层 DeepAgent（编排器）
-	okxWatcherAgent, err := okx_watcher.NewOkxWatcherAgent(ctx, svcCtx, riskOfficerAgent.Agent(), sentimentAnalystAgent.Agent())
-	if err != nil {
-		cancel()
-		return err
-	}
+		// Initialize OKXWatcher agent (DeepAgent orchestrator)
+		okxWatcherAgent, err := okx_watcher.NewOkxWatcherAgent(ctx, svcCtx, riskOfficerAgent.Agent(), sentimentAnalystAgent.Agent())
+		if err != nil {
+			initErr = err
+			cancel()
+			return
+		}
 
-	_agents = &AgentsModel{
-		svcCtx:           svcCtx,
-		OkxWatcher:       okxWatcherAgent.Agent(),
-		RiskOfficer:      riskOfficerAgent.Agent(),
-		SentimentAnalyst: sentimentAnalystAgent.Agent(),
-		mux:              sync.Mutex{},
-		ctx:              ctx,
-		cancel:           cancel,
+		_agents = &AgentsModel{
+			svcCtx:           svcCtx,
+			OkxWatcher:       okxWatcherAgent.Agent(),
+			RiskOfficer:      riskOfficerAgent.Agent(),
+			SentimentAnalyst: sentimentAnalystAgent.Agent(),
+			mux:              sync.Mutex{},
+			ctx:              ctx,
+			cancel:           cancel,
+		}
+	})
+	return initErr
+}
+
+// Close cleans up resources held by AgentsModel
+func (a *AgentsModel) Close() error {
+	if a.cancel != nil {
+		a.cancel()
 	}
 	return nil
 }
