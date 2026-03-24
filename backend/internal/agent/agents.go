@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/PineappleBond/TradingEino/backend/internal/agent/executor_agent"
 	"github.com/PineappleBond/TradingEino/backend/internal/agent/okx_watcher"
 	"github.com/PineappleBond/TradingEino/backend/internal/agent/risk_officer"
 	"github.com/PineappleBond/TradingEino/backend/internal/agent/sentiment_analyst"
@@ -16,6 +17,7 @@ type AgentsModel struct {
 	OkxWatcher       adk.Agent
 	RiskOfficer      adk.Agent
 	SentimentAnalyst adk.Agent
+	Executor         adk.Agent
 	mux              sync.Mutex
 	ctx              context.Context
 	cancel           context.CancelFunc
@@ -63,11 +65,20 @@ func InitAgents(ctx context.Context, svcCtx *svc.ServiceContext) error {
 			return
 		}
 
+		// Initialize Executor agent (ChatModelAgent for trade execution)
+		executorAgent, err := executor_agent.NewExecutorAgent(ctx, svcCtx)
+		if err != nil {
+			initErr = err
+			cancel()
+			return
+		}
+
 		_agents = &AgentsModel{
 			svcCtx:           svcCtx,
 			OkxWatcher:       okxWatcherAgent.Agent(),
 			RiskOfficer:      riskOfficerAgent.Agent(),
 			SentimentAnalyst: sentimentAnalystAgent.Agent(),
+			Executor:         executorAgent.Agent(),
 			mux:              sync.Mutex{},
 			ctx:              ctx,
 			cancel:           cancel,
