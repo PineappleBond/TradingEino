@@ -186,11 +186,6 @@ func (h *OKXWatcherHandler) Execute(ctx context.Context, task *model.CronTask, e
 		if !ok {
 			break
 		}
-		// 添加调试输出
-		if false {
-			debugBytes, _ := json.Marshal(event)
-			fmt.Printf("DEBUG: event.AgentName=%s, RunPath=%v, JSON=%s\n", event.AgentName, event.RunPath, string(debugBytes))
-		}
 		if event.Output != nil && event.Output.MessageOutput != nil {
 			if lastMessageStream != nil {
 				lastMessageStream.Close()

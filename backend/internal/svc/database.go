@@ -1,7 +1,7 @@
 package svc
 
 import (
-	"fmt"
+	"context"
 	"os"
 	"path/filepath"
 
@@ -16,8 +16,9 @@ import (
 
 // mustInitDB 初始化数据库连接
 func mustInitDB(cfg config.Config, log *logger.Logger) *gorm.DB {
+	ctx := context.Background()
 	if cfg.DB.Type != "sqlite" {
-		fmt.Fprintf(os.Stderr, "db type %s not supported\n", cfg.DB.Type)
+		log.Error(ctx, "unsupported database type", nil, "type", cfg.DB.Type)
 		os.Exit(1)
 		return nil
 	}
@@ -36,7 +37,7 @@ func mustInitDB(cfg config.Config, log *logger.Logger) *gorm.DB {
 		Logger: newGormLogger(log, logLevel),
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to init gorm: %v\n", err)
+		log.Error(ctx, "failed to init gorm", err)
 		os.Exit(1)
 		return nil
 	}
@@ -48,7 +49,7 @@ func mustInitDB(cfg config.Config, log *logger.Logger) *gorm.DB {
 	)
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to migrate: %v\n", err)
+		log.Error(ctx, "failed to migrate", err)
 		os.Exit(1)
 	}
 
