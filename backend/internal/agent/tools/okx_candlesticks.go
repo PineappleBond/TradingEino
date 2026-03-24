@@ -17,10 +17,12 @@ import (
 	"github.com/cloudwego/eino/schema"
 	"github.com/markcheno/go-talib"
 	"github.com/shopspring/decimal"
+	"golang.org/x/time/rate"
 )
 
 type OkxCandlesticksTool struct {
-	svcCtx *svc.ServiceContext
+	svcCtx  *svc.ServiceContext
+	limiter *rate.Limiter
 }
 
 func (c *OkxCandlesticksTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
@@ -77,11 +79,11 @@ func (c *OkxCandlesticksTool) InvokableRun(ctx context.Context, argumentsInJSON 
 	var request Request
 	err := json.Unmarshal([]byte(argumentsInJSON), &request)
 	if err != nil {
-		return err.Error(), nil
+		return "", err
 	}
 	candlesticks, err := c.GetCandlesticks(ctx, request.Symbol, okex.BarSize(request.Bar), nil, request.Limit+300)
 	if err != nil {
-		return err.Error(), nil
+		return "", err
 	}
 	if len(candlesticks) <= 300 {
 		return "获取K线数据失败", nil
@@ -143,7 +145,8 @@ func (c *OkxCandlesticksTool) InvokableRun(ctx context.Context, argumentsInJSON 
 
 func NewOkxCandlesticksTool(svcCtx *svc.ServiceContext) *OkxCandlesticksTool {
 	return &OkxCandlesticksTool{
-		svcCtx: svcCtx,
+		svcCtx:  svcCtx,
+		limiter: rate.NewLimiter(rate.Every(time.Second/10), 1), // OKX API 限流：10 次/秒
 	}
 }
 
@@ -157,6 +160,10 @@ func (c *OkxCandlesticksTool) GetCandlesticks(
 		after = afterDatetime.UnixMilli()
 	}
 	for {
+		// 等待速率限制
+		if err := c.limiter.Wait(ctx); err != nil {
+			return nil, err
+		}
 		getCandlesticksHistory, err := c.svcCtx.OKXClient.Rest.Market.GetCandlesticksHistory(requests_market.GetCandlesticks{
 			InstID: symbol,
 			After:  after,
@@ -182,7 +189,6 @@ func (c *OkxCandlesticksTool) GetCandlesticks(
 		if len(candles) >= limit {
 			break
 		}
-		time.Sleep(time.Millisecond * 50)
 	}
 
 	// 按正序排列

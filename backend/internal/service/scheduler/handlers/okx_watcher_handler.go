@@ -144,7 +144,7 @@ func (h *OKXWatcherHandler) Execute(ctx context.Context, task *model.CronTask, e
 	userMessageTextWriter := &strings.Builder{}
 	localTimezone := "Asia/ShangHai"
 	location, err := time.LoadLocation("Local")
-	if err == nil {
+	if err == nil && location.String() != "Local" {
 		localTimezone = location.String()
 	}
 	applyData := map[string]any{

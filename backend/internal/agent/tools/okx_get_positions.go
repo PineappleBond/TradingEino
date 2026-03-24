@@ -46,7 +46,7 @@ func (c *OkxGetPositionsTool) InvokableRun(ctx context.Context, argumentsInJSON 
 	var request Request
 	err := json.Unmarshal([]byte(argumentsInJSON), &request)
 	if err != nil {
-		return err.Error(), nil
+		return "", err
 	}
 	leverage := 1
 	if request.Leverage != nil {
@@ -63,10 +63,10 @@ func (c *OkxGetPositionsTool) InvokableRun(ctx context.Context, argumentsInJSON 
 			InstType: "",
 		})
 		if err != nil {
-			return err.Error(), nil
+			return "", err
 		}
 		if getPositions.Code != 0 {
-			return getPositions.Msg, nil
+			return "", fmt.Errorf("OKX API error: %s", getPositions.Msg)
 		}
 		availablePositions := make([]*account.Position, 0)
 		for _, position := range getPositions.Positions {
@@ -113,14 +113,13 @@ func (c *OkxGetPositionsTool) InvokableRun(ctx context.Context, argumentsInJSON 
 			TdMode:   "cross",
 		})
 		if err != nil {
-			return err.Error(), nil
+			return "", err
 		}
 		if getMaxTradeAmount.Code != 0 {
-			return getMaxTradeAmount.Msg, nil
+			return "", fmt.Errorf("OKX API error: %s", getMaxTradeAmount.Msg)
 		}
 		if len(getMaxTradeAmount.MaxBuySellAmounts) != 1 {
-			errMsg := fmt.Sprintf("get max available trade amount amounts: %d", len(getMaxTradeAmount.MaxBuySellAmounts))
-			return errMsg, nil
+			return "", fmt.Errorf("get max available trade amount amounts: %d", len(getMaxTradeAmount.MaxBuySellAmounts))
 		}
 		output += "```markdown\n| 最大可买 | 最大可卖 |\n"
 		output += "| :----- | :------ |\n"

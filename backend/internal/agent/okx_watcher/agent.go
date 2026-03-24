@@ -14,23 +14,17 @@ import (
 	"github.com/cloudwego/eino/compose"
 )
 
-var okxWatcher adk.Agent
-
-func OkxWatcher() adk.Agent {
-	return okxWatcher
+// OkxWatcherAgent OKX 盯盘 Agent（DeepAgent，作为顶层编排器）
+type OkxWatcherAgent struct {
+	agent adk.Agent
 }
 
-//go:embed DESCRIPTION.md
-var DESCRIPTION string
+func NewOkxWatcherAgent(ctx context.Context, svcCtx *svc.ServiceContext, subAgents ...adk.Agent) (*OkxWatcherAgent, error) {
+	baseTools := []tool.BaseTool{
+		tools.NewOkxCandlesticksTool(svcCtx),
+	}
 
-//go:embed SOUL.md
-var SOUL string
-
-func Init(ctx context.Context, svcCtx *svc.ServiceContext, subAgents ...adk.Agent) error {
-	var err error
-	baseTools := make([]tool.BaseTool, 0)
-	baseTools = append(baseTools, tools.NewOkxCandlesticksTool(svcCtx))
-	okxWatcher, err = deep.New(ctx, &deep.Config{
+	agent, err := deep.New(ctx, &deep.Config{
 		Name:        "OKXWatcher",
 		Description: DESCRIPTION,
 		ChatModel:   svcCtx.ChatModel,
@@ -38,23 +32,26 @@ func Init(ctx context.Context, svcCtx *svc.ServiceContext, subAgents ...adk.Agen
 		SubAgents:   subAgents,
 		ToolsConfig: adk.ToolsConfig{
 			ToolsNodeConfig: compose.ToolsNodeConfig{
-				Tools:                baseTools,
-				UnknownToolsHandler:  nil,
-				ExecuteSequentially:  false,
-				ToolArgumentsHandler: nil,
-				ToolCallMiddlewares:  nil,
+				Tools: baseTools,
 			},
-			ReturnDirectly:     nil,
 			EmitInternalEvents: true,
 		},
-		MaxIteration:                 0,
-		WithoutWriteTodos:            false,
-		WithoutGeneralSubAgent:       false,
-		TaskToolDescriptionGenerator: nil,
-		Middlewares:                  nil,
+		MaxIteration: 100,
 	})
 	if err != nil {
-		logger.Error(ctx, "InitOkxWatcher error", err)
+		logger.Error(ctx, "NewOkxWatcher error", err)
+		return nil, err
 	}
-	return err
+
+	return &OkxWatcherAgent{agent: agent}, nil
 }
+
+func (o *OkxWatcherAgent) Agent() adk.Agent {
+	return o.agent
+}
+
+//go:embed DESCRIPTION.md
+var DESCRIPTION string
+
+//go:embed SOUL.md
+var SOUL string

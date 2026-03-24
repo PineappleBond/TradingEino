@@ -39,7 +39,7 @@ func (c *OkxGetFundingRateTool) InvokableRun(ctx context.Context, argumentsInJSO
 	var request Request
 	err := json.Unmarshal([]byte(argumentsInJSON), &request)
 	if err != nil {
-		return err.Error(), nil
+		return "", err
 	}
 
 	output := ""
@@ -49,10 +49,10 @@ func (c *OkxGetFundingRateTool) InvokableRun(ctx context.Context, argumentsInJSO
 			InstID: request.Symbol,
 		})
 		if err != nil {
-			return err.Error(), nil
+			return "", err
 		}
 		if getFundingRate.Code != 0 {
-			return getFundingRate.Msg, nil
+			return "", fmt.Errorf("OKX API error: %s", getFundingRate.Msg)
 		}
 
 		if len(getFundingRate.FundingRates) == 0 {
