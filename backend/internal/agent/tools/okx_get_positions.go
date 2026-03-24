@@ -5,16 +5,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
+	"github.com/PineappleBond/TradingEino/backend/pkg/okex"
 	"github.com/PineappleBond/TradingEino/backend/pkg/okex/models/account"
 	accountrequests "github.com/PineappleBond/TradingEino/backend/pkg/okex/requests/rest/account"
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
+	"golang.org/x/time/rate"
 )
 
 type OkxGetPositionsTool struct {
-	svcCtx *svc.ServiceContext
+	svcCtx  *svc.ServiceContext
+	limiter *rate.Limiter
 }
 
 func (c *OkxGetPositionsTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
@@ -52,6 +56,12 @@ func (c *OkxGetPositionsTool) InvokableRun(ctx context.Context, argumentsInJSON 
 	if request.Leverage != nil {
 		leverage = *request.Leverage
 	}
+
+	// Wait for rate limiter before making API call
+	if err := c.limiter.Wait(ctx); err != nil {
+		return "", fmt.Errorf("rate limiter wait failed: %w", err)
+	}
+
 	output := ""
 	output += "# 当前仓位\n\n"
 	{
@@ -66,7 +76,11 @@ func (c *OkxGetPositionsTool) InvokableRun(ctx context.Context, argumentsInJSON 
 			return "", err
 		}
 		if getPositions.Code != 0 {
-			return "", fmt.Errorf("OKX API error: %s", getPositions.Msg)
+			return "", &okex.OKXError{
+				Code:     getPositions.Code,
+				Msg:      getPositions.Msg,
+				Endpoint: "GetPositions",
+			}
 		}
 		availablePositions := make([]*account.Position, 0)
 		for _, position := range getPositions.Positions {
@@ -116,7 +130,11 @@ func (c *OkxGetPositionsTool) InvokableRun(ctx context.Context, argumentsInJSON 
 			return "", err
 		}
 		if getMaxTradeAmount.Code != 0 {
-			return "", fmt.Errorf("OKX API error: %s", getMaxTradeAmount.Msg)
+			return "", &okex.OKXError{
+				Code:     getMaxTradeAmount.Code,
+				Msg:      getMaxTradeAmount.Msg,
+				Endpoint: "GetMaxBuySellAmount",
+			}
 		}
 		if len(getMaxTradeAmount.MaxBuySellAmounts) != 1 {
 			return "", fmt.Errorf("get max available trade amount amounts: %d", len(getMaxTradeAmount.MaxBuySellAmounts))
@@ -132,5 +150,8 @@ func (c *OkxGetPositionsTool) InvokableRun(ctx context.Context, argumentsInJSON 
 }
 
 func NewOkxGetPositionsTool(svcCtx *svc.ServiceContext) *OkxGetPositionsTool {
-	return &OkxGetPositionsTool{svcCtx: svcCtx}
+	return &OkxGetPositionsTool{
+		svcCtx:  svcCtx,
+		limiter: rate.NewLimiter(rate.Every(200*time.Millisecond), 1), // 5 req/s for Account endpoint
+	}
 }
