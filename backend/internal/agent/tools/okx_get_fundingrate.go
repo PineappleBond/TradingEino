@@ -63,7 +63,7 @@ func (c *OkxGetFundingRateTool) InvokableRun(ctx context.Context, argumentsInJSO
 			output += "| :---- | :----- | :------- | :------------- | :----- |\n"
 			for _, fr := range getFundingRate.FundingRates {
 				output += fmt.Sprintf(
-					"| %s | %.4f | %s | %s | %s |\n",
+					"| %s | %.10f | %s | %s | %s |\n",
 					fr.InstID,
 					fr.FundingRate,
 					time.Time(fr.FundingTime).Format(time.RFC3339),
