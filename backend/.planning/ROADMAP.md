@@ -9,9 +9,10 @@
 ## Phases
 
 - [x] **Phase 1: Foundation & Safety** - Critical infrastructure fixes: error handling, rate limiting, singleton pattern, context propagation, graceful shutdown
-- [ ] **Phase 2: Analysis Layer Completion** - Refactor SubAgents to ChatModelAgent pattern with proper documentation
-- [ ] **Phase 3: Execution Automation** - OKX trading tools and Executor Agent with Level 1 autonomy
+- [ ] **Phase 2: Analysis Layer — Multi-Agent Architecture** - Implement 4 SubAgents (Techno, FlowAnalyzer, PositionManager, Sentiment) with DeepAgent coordination
+- [x] **Phase 3: Execution Automation** - OKX trading tools and Executor Agent with Level 1 autonomy
 - [ ] **Phase 4: RAG Decision Memory** - Vector storage infrastructure and decision save/search integration
+- [ ] **Phase 5: Risk Management Layer** - Independent risk monitoring, auto stop-loss/take-profit, circuit breaker
 
 ---
 
@@ -41,19 +42,21 @@
 
 ---
 
-### Phase 2: Analysis Layer Completion
+### Phase 2: Analysis Layer — Multi-Agent Architecture
 
-**Goal:** Multi-agent analysis chain with properly structured SubAgents
+**Goal:** Implement target architecture with 4 specialized SubAgents coordinated by OKXWatcher
 
 **Depends on:** Phase 1 (requires safe tool infrastructure)
 
-**Requirements:** ANAL-01, ANAL-02, ANAL-03, ANAL-04
+**Requirements:** ANAL-02, ANAL-03, ANAL-04, ANAL-05, ANAL-06
 
 **Success Criteria** (what must be TRUE):
-1. RiskOfficer runs as ChatModelAgent instead of DeepAgent
-2. SentimentAnalyst runs as ChatModelAgent instead of DeepAgent
-3. OKXWatcher orchestrates SubAgents via DeepAgent coordinator pattern
-4. Each SubAgent has DESCRIPTION.md and SOUL.md documentation files
+1. TechnoAgent (ChatModelAgent) analyzes K-line data + 20+ technical indicators
+2. FlowAnalyzer (ChatModelAgent) analyzes orderbook and trade history
+3. PositionManager (ChatModelAgent) monitors positions and account balance
+4. SentimentAnalyst (ChatModelAgent) analyzes funding rate sentiment
+5. OKXWatcher orchestrates all 4 SubAgents via DeepAgent coordinator pattern
+6. Each SubAgent has DESCRIPTION.md and SOUL.md documentation files
 
 **Plans:** TBD
 
@@ -65,15 +68,17 @@
 
 **Depends on:** Phase 1 (requires safe tool infrastructure)
 
-**Requirements:** EXEC-01, EXEC-02, EXEC-03, EXEC-04, EXEC-05, EXEC-06
+**Requirements:** EXEC-01, EXEC-02, EXEC-03, EXEC-04, EXEC-05, EXEC-06, EXEC-07, DATA-01, DATA-02, DATA-03, DATA-04, MKT-01, MKT-02, MKT-03, MKT-04
 
 **Success Criteria** (what must be TRUE):
 1. User can place limit and market orders via `okx-place-order-tool`
 2. User can cancel pending orders via `okx-cancel-order-tool`
 3. User can query order status via `okx-get-order-tool`
-4. Executor Agent executes trades only on explicit OKXWatcher commands (Level 1 autonomy)
-5. Stop-loss/take-profit orders use OKX native `sl_tp` algo order type
-6. Order responses validate OKX `sCode`/`sMsg` fields (detect silent failures)
+4. User can close positions via `okx-close-position-tool`
+5. Executor Agent executes trades only on explicit OKXWatcher commands (Level 1 autonomy)
+6. Stop-loss/take-profit orders use OKX native `sl_tp` algo order type
+7. Order responses validate OKX `sCode`/`sMsg` fields (detect silent failures)
+8. Market analysis tools available: orderbook, trades history, funding rate
 
 **Plans:** 4 plans
 
@@ -81,7 +86,7 @@
 - [x] 03-execution-automation-01-PLAN.md — P0 核心订单工具（下单、撤单、查询）
 - [x] 03-execution-automation-02-PLAN.md — P0 止盈止损工具（附加 SL/TP、下单带 SL/TP）
 - [x] 03-execution-automation-03-PLAN.md — Executor Agent（Level 1 自主性）
-- [ ] 03-execution-automation-04-PLAN.md — P1 批量操作工具（批量下单、批量撤单、历史查询、平仓）
+- [x] 03-execution-automation-04-PLAN.md — P1 批量操作工具（批量下单、批量撤单、历史查询、平仓）
 
 ---
 
@@ -104,14 +109,33 @@
 
 ---
 
+### Phase 5: Risk Management Layer
+
+**Goal:** Independent risk monitoring and protection mechanisms
+
+**Depends on:** Phase 3 (requires execution infrastructure for forced reduction)
+
+**Requirements:** RISK-01, RISK-02, RISK-03
+
+**Success Criteria** (what must be TRUE):
+1. RiskMonitor Agent runs independently on 30s schedule
+2. Auto stop-loss/take-profit triggers on price conditions
+3. Circuit breaker halts trading on daily loss limit (5% warning, 10% stop)
+4. Margin ratio monitoring with forced reduction > 90%
+
+**Plans:** TBD
+
+---
+
 ## Progress Table
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Safety | 3/3 | Complete | 01-foundation-safety-01, 01-foundation-safety-02, 01-foundation-safety-03 |
-| 2. Analysis Layer Completion | 0/4 | Not started | - |
-| 3. Execution Automation | 3/4 | In Progress | 03-01, 03-02, 03-03 |
+| 2. Analysis Layer — Multi-Agent | 0/6 | Not started | - |
+| 3. Execution Automation | 4/4 | Complete | 03-01, 03-02, 03-03, 03-04 |
 | 4. RAG Decision Memory | 0/5 | Not started | - |
+| 5. Risk Management Layer | 0/3 | Not started | - |
 
 ---
 
@@ -124,23 +148,37 @@
 | FOUND-03 | Phase 1 | Complete |
 | FOUND-04 | Phase 1 | Complete |
 | FOUND-05 | Phase 1 | Complete |
-| ANAL-01 | Phase 2 | Pending |
+| ANAL-01 | Phase 2 | Complete |
 | ANAL-02 | Phase 2 | Pending |
 | ANAL-03 | Phase 2 | Pending |
 | ANAL-04 | Phase 2 | Pending |
+| ANAL-05 | Phase 2 | Pending |
+| ANAL-06 | Phase 2 | Pending |
 | EXEC-01 | Phase 3 | Complete |
 | EXEC-02 | Phase 3 | Complete |
 | EXEC-03 | Phase 3 | Complete |
 | EXEC-04 | Phase 3 | Complete |
 | EXEC-05 | Phase 3 | Complete |
 | EXEC-06 | Phase 3 | Complete |
+| EXEC-07 | Phase 3 | Complete |
+| DATA-01 | Phase 3 | Complete |
+| DATA-02 | Phase 3 | Pending |
+| DATA-03 | Phase 3 | Pending |
+| DATA-04 | Phase 3 | Pending |
+| MKT-01 | Phase 3 | Complete |
+| MKT-02 | Phase 3 | Pending |
+| MKT-03 | Phase 3 | Pending |
+| MKT-04 | Phase 3 | Complete |
 | RAG-01 | Phase 4 | Pending |
 | RAG-02 | Phase 4 | Pending |
 | RAG-03 | Phase 4 | Pending |
 | RAG-04 | Phase 4 | Pending |
 | RAG-05 | Phase 4 | Pending |
+| RISK-01 | Phase 5 | Pending |
+| RISK-02 | Phase 5 | Pending |
+| RISK-03 | Phase 5 | Pending |
 
-**Coverage:** 20/20 v1 requirements mapped ✓
+**Coverage:** 33/33 v1 requirements mapped ✓
 
 ---
 
@@ -148,10 +186,10 @@
 
 | Requirement | Category | Reason |
 |-------------|----------|--------|
-| RISK-01 | Risk Management | Independent RiskMonitor deferred per user decision |
-| RISK-02 | Risk Management | Telegram alerts deferred per user decision |
-| RISK-03 | Risk Management | Forced position reduction deferred per user decision |
-| RISK-04 | Risk Management | Circuit breaker deferred per user decision |
+| ENH-01 ~ ENH-05 | Enhanced Features | Deferred to v2+ |
+| DATA-05 ~ DATA-09 | Data Tools Expansion | Deferred to v2+ |
+| TECH-01 ~ TECH-02 | Analysis Expansion | Deferred to v2+ |
+| MON-01 ~ MON-03 | System Monitoring | Deferred to v2+ |
 
 ---
 
@@ -159,4 +197,5 @@
 *Roadmap updated: 2026-03-24 - Phase 1 plans created (3 plans in 2 waves)*
 *Roadmap updated: 2026-03-24 - Phase 1 complete (3/3 plans)*
 *Roadmap updated: 2026-03-24 - Phase 3 plans created (4 plans in 3 waves)*
-*Roadmap updated: 2026-03-24 - Phase 3 Plans 01-03 complete (3/4 plans, EXEC-01 through EXEC-06 complete)*
+*Roadmap updated: 2026-03-24 - Phase 3 complete (4/4 plans)*
+*Roadmap updated: 2026-03-24 — 根据 03-CONTEXT.md 多 Agent 架构设计调整，新增 Phase 5 风控层*
