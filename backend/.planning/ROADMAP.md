@@ -35,8 +35,8 @@
 **Plans:** 3 plans
 
 **Plans:**
-- [ ] 01-foundation-safety-01-PLAN.md — OKXError 统一错误类型 + 三个 Tool 的速率限制
-- [ ] 01-foundation-safety-02-PLAN.md — sync.Once 单例模式 + 上下文传播
+- [x] 01-foundation-safety-01-PLAN.md — OKXError 统一错误类型 + 三个 Tool 的速率限制
+- [x] 01-foundation-safety-02-PLAN.md — sync.Once 单例模式 + 上下文传播
 - [ ] 01-foundation-safety-03-PLAN.md — 优雅关闭实现（含 checkpoint 验证）
 
 ---
@@ -102,7 +102,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation & Safety | 0/3 | Planned | - |
+| 1. Foundation & Safety | 1/3 | In Progress | 01-foundation-safety-02 |
 | 2. Analysis Layer Completion | 0/4 | Not started | - |
 | 3. Execution Automation | 0/6 | Not started | - |
 | 4. RAG Decision Memory | 0/5 | Not started | - |
