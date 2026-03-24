@@ -21,37 +21,176 @@
 <decisions>
 ## Implementation Decisions
 
-### 订单工具清单
-- **基础订单工具**：`okx-place-order`、`okx-cancel-order`、`okx-get-order`
-- **止盈止损工具**：`okx-attach-sl-tp`（附加到订单）、`okx-place-order-with-sl-tp`（下单时带参）
-- **批量订单工具**：`okx-batch-place-order`、`okx-batch-cancel-order`
-- **历史订单查询**：`okx-get-order-history`
-- **平仓工具**：`okx-close-position`（支持全部平仓和部分平仓）
+### 订单工具清单（共 9 个工具）
+| 工具名称 | 功能 | 优先级 |
+|----------|------|--------|
+| `okx-place-order` | 下单（限价/市价/POST_ONLY/FOK/IOC） | P0 |
+| `okx-cancel-order` | 取消单个订单 | P0 |
+| `okx-get-order` | 查询单个订单状态 | P0 |
+| `okx-attach-sl-tp` | 为已有订单附加止盈止损 | P0 |
+| `okx-place-order-with-sl-tp` | 下单时同时设置止盈止损 | P0 |
+| `okx-batch-place-order` | 批量下单（最多同时下 20 单） | P1 |
+| `okx-batch-cancel-order` | 批量撤单（最多同时撤 20 单） | P1 |
+| `okx-get-order-history` | 查询历史订单（支持时间范围筛选） | P1 |
+| `okx-close-position` | 平仓（支持全部平仓和部分平仓，按百分比） | P1 |
 
 ### 参数设计
-- **参数命名**：和 OKX API 保持一致（instID, side, posSide, ordType, size, price）
-- **仓位模式**：默认 net 模式，支持显式指定 long/short
-- **精度处理**：在工具文档（Info 描述）中说明精度规则，Agent 负责传入正确精度
-- **市价单单位**：使用合约张数作为单位（避免不同币种精度差异）
-- **订单类型支持**：market, limit, post_only, fok, ioc
+
+**place-order 工具参数：**
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| instID | string | 是 | 交易对，如 `ETH-USDT-SWAP` |
+| side | string | 是 | 订单方向：`buy` 或 `sell` |
+| posSide | string | 否 | 仓位模式：`long`/`short`/`net`，默认 `net` |
+| ordType | string | 是 | 订单类型：`market`/`limit`/`post_only`/`fok`/`ioc` |
+| size | string | 是 | 订单数量（合约张数） |
+| price | string | 条件必填 | 订单价格，`limit` 和 `post_only` 订单必填，`market` 订单留空 |
+
+**close-position 工具参数：**
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| instID | string | 是 | 交易对，如 `ETH-USDT-SWAP` |
+| posSide | string | 否 | 仓位方向：`long`/`short`/`net`，默认查询全部 |
+| percentage | number | 否 | 平仓百分比（0-100），默认 100（全部平仓） |
+
+**精度规则（在工具 Info 描述中说明）：**
+- `size`（数量）：合约张数，整数，如 `1`、`10`、`100`
+- `price`（价格）：根据交易对确定小数位数，参考 OKX API `tick_sz` 字段
+- 精度错误由 OKX API 直接拒绝，工具不自动修正
+
+**止盈止损工具参数：**
+
+**okx-attach-sl-tp**（附加到已有订单）：
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| instID | string | 是 | 交易对 |
+| ordId | string | 是 | 已有订单 ID |
+| slTriggerPx | string | 条件 | 止损触发价格，和 tpTriggerPx 至少填一个 |
+| slOrderPx | string | 否 | 止损委托价格，留空表示市价单 |
+| tpTriggerPx | string | 条件 | 止盈触发价格，和 slTriggerPx 至少填一个 |
+| tpOrderPx | string | 否 | 止盈委托价格，留空表示市价单 |
+
+**okx-place-order-with-sl-tp**（下单时带止盈止损）：
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| instID | string | 是 | 交易对 |
+| side | string | 是 | 订单方向 |
+| posSide | string | 否 | 仓位模式，默认 net |
+| ordType | string | 是 | 主订单类型 |
+| size | string | 是 | 主订单数量 |
+| price | string | 条件 | 主订单价格（limit/post_only 必填） |
+| slTriggerPx | string | 条件 | 止损触发价格，和 tpTriggerPx 至少填一个 |
+| slOrderPx | string | 否 | 止损委托价格，留空表示市价单 |
+| tpTriggerPx | string | 条件 | 止盈触发价格，和 slTriggerPx 至少填一个 |
+| tpOrderPx | string | 否 | 止盈委托价格，留空表示市价单 |
 
 ### 速率限制与并发
-- **速率限制**：5 req/s（所有订单工具，包括批量工具）
-- **并发安全**：限流器保证并发安全 + 防重复下单机制
-- **防重复下单**：基于唯一 ID 去重（相同请求 ID 拒绝）
+
+**速率限制配置：**
+| 工具类型 | 限流值 | 说明 |
+|----------|--------|------|
+| 所有订单工具 | 5 req/s | OKX 交易接口保守限制 |
+
+**并发安全：**
+- 限流器保证并发安全（`rate.Limiter`）
+- 防重复下单机制：基于唯一请求 ID 去重（相同请求 ID 拒绝）
+
+**批量操作限制：**
+- OKX 批量下单/撤单 API 最多支持 20 个订单/批次
+- 工具需要验证输入数量，超过 20 个时返回错误
 
 ### Agent 架构
-- **Executor Agent 类型**：使用 ChatModelAgent 模式（和 RiskOfficer 一致）
-- **自主性级别**：Level 1，仅执行 OKXWatcher 的明确指令，不主动分析
-- **工具调用权限**：只有 Executor Agent 可以调用订单工具
+
+**Executor Agent：**
+- **类型**：ChatModelAgent（和 RiskOfficer、SentimentAnalyst 一致）
+- **名称**：`ExecutorAgent` 或 `TradingExecutor`
+- **自主性级别**：Level 1 — 仅执行 OKXWatcher 的明确指令，不主动分析市场或发起交易
+- **工具调用权限**：只有 Executor Agent 可以调用订单工具（通过工具描述约束，非技术强制）
 - **风控检查**：Executor 不需要内置风控检查，由 OKXWatcher 负责协调 RiskOfficer
 
+**OKXWatcher 与 Executor 交互模式：**
+```
+OKXWatcher (DeepAgent 协调器)
+    ↓
+    | 1. 咨询 RiskOfficer（风控检查）
+    ↓
+    | 2. 下达明确交易指令给 Executor
+    ↓
+ExecutorAgent (ChatModelAgent)
+    ↓
+    | 3. 调用订单工具执行交易
+    ↓
+    | 4. 返回执行结果给 OKXWatcher
+```
+
+**Executor Agent 提示词关键约束：**
+- 只负责执行，不负责分析市场或判断交易时机
+- 必须等待 OKXWatcher 的明确指令才能执行交易
+- 订单失败时，返回详细错误信息，由 OKXWatcher 决定下一步操作
+- 不主动重试失败订单，除非 OKXWatcher 明确要求重试
+
 ### 响应格式
-- **返回格式**：Markdown 表格（和现有 positions/candlesticks 工具一致）
-- **订单状态**：使用 OKX 原始状态（live, filled, cancelled, rejected 等）
-- **返回字段**：完整的订单字段（订单 ID、状态、价格、数量、成交数量、未成交数量、成交金额等对 Agent 有用的字段）
-- **错误处理**：返回 Markdown 错误提示（在 Markdown 开头用醒目方式显示错误信息）
-- **批量部分失败**：返回成功订单列表和失败订单列表（含错误原因），让 Agent 自行处理
+
+**place-order 返回字段（Markdown 表格）：**
+```markdown
+| 字段 | 说明 |
+|------|------|
+| ordId | OKX 订单 ID |
+| clOrdId | 客户端订单 ID（如有） |
+| tag | 订单标签（如有） |
+| state | 订单状态 |
+| sCode | 子错误码 |
+| sMsg | 子错误信息 |
+```
+
+**get-order 返回字段（Markdown 表格）：**
+```markdown
+| 字段 | 说明 |
+|------|------|
+| ordId | 订单 ID |
+| instId | 交易对 |
+| side | 方向（buy/sell） |
+| posSide | 仓位模式（long/short/net） |
+| ordType | 订单类型 |
+| size | 订单数量 |
+| px | 委托价格 |
+| avgPx | 成交价格 |
+| fillSize | 已成交数量 |
+| unfillSize | 未成交数量 |
+| state | 订单状态 |
+| cTime | 创建时间（毫秒时间戳） |
+| uTime | 更新时间（毫秒时间戳） |
+```
+
+**订单状态（OKX 原始值）：**
+- `live` — 待成交
+- `partially_filled` — 部分成交
+- `filled` — 完全成交
+- `cancelled` — 已取消
+- `rejected` — 已拒绝
+- `expired` — 已过期（FOK/IOC 等特殊订单）
+
+**错误处理格式：**
+```markdown
+**❌ 订单操作失败**
+
+**错误代码：** {sCode}
+**错误信息：** {sMsg}
+**请求参数：** {instID, side, size, ...}
+```
+
+**批量操作返回格式：**
+```markdown
+## 成功订单
+| ordId | instId | state | ... |
+|-------|--------|-------|-----|
+| ... | ... | ... | ... |
+
+## 失败订单
+| 请求索引 | sCode | sMsg |
+|----------|-------|------|
+| 0 | 51000 | 余额不足 |
+```
 
 ### 日志与测试
 - **日志级别**：详细日志（记录订单 ID、金额、价格、时间等完整信息）
