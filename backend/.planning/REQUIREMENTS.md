@@ -11,8 +11,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **FOUND-01**: All tools return errors properly (`"", err`) instead of (`err.Error(), nil`)
 - [ ] **FOUND-02**: All API tools have rate.Limiter with conservative limits (5 req/s for trade endpoints)
-- [ ] **FOUND-03**: Agents use singleton pattern with sync.Once instead of global variables
-- [ ] **FOUND-04**: Context propagation throughout agent initialization and tool execution
+- [x] **FOUND-03**: Agents use singleton pattern with sync.Once instead of global variables
+- [x] **FOUND-04**: Context propagation throughout agent initialization and tool execution
 - [ ] **FOUND-05**: Graceful shutdown on application exit
 
 ### Analysis Layer
@@ -85,8 +85,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | FOUND-01 | Phase 1 | Pending |
 | FOUND-02 | Phase 1 | Pending |
-| FOUND-03 | Phase 1 | Pending |
-| FOUND-04 | Phase 1 | Pending |
+| FOUND-03 | Phase 1 | Complete |
+| FOUND-04 | Phase 1 | Complete |
 | FOUND-05 | Phase 1 | Pending |
 | ANAL-01 | Phase 2 | Pending |
 | ANAL-02 | Phase 2 | Pending |

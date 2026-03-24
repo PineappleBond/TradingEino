@@ -7,13 +7,16 @@ import (
 	"time"
 
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
+	"github.com/PineappleBond/TradingEino/backend/pkg/okex"
 	publicrequests "github.com/PineappleBond/TradingEino/backend/pkg/okex/requests/rest/public"
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
+	"golang.org/x/time/rate"
 )
 
 type OkxGetFundingRateTool struct {
-	svcCtx *svc.ServiceContext
+	svcCtx  *svc.ServiceContext
+	limiter *rate.Limiter
 }
 
 func (c *OkxGetFundingRateTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
@@ -42,6 +45,11 @@ func (c *OkxGetFundingRateTool) InvokableRun(ctx context.Context, argumentsInJSO
 		return "", err
 	}
 
+	// Wait for rate limiter before making API call
+	if err := c.limiter.Wait(ctx); err != nil {
+		return "", fmt.Errorf("rate limiter wait failed: %w", err)
+	}
+
 	output := ""
 	output += "# 资金费率\n\n"
 	{
@@ -52,7 +60,11 @@ func (c *OkxGetFundingRateTool) InvokableRun(ctx context.Context, argumentsInJSO
 			return "", err
 		}
 		if getFundingRate.Code != 0 {
-			return "", fmt.Errorf("OKX API error: %s", getFundingRate.Msg)
+			return "", &okex.OKXError{
+				Code:     getFundingRate.Code,
+				Msg:      getFundingRate.Msg,
+				Endpoint: "GetFundingRate",
+			}
 		}
 
 		if len(getFundingRate.FundingRates) == 0 {
@@ -78,5 +90,8 @@ func (c *OkxGetFundingRateTool) InvokableRun(ctx context.Context, argumentsInJSO
 }
 
 func NewOkxGetFundingRateTool(svcCtx *svc.ServiceContext) *OkxGetFundingRateTool {
-	return &OkxGetFundingRateTool{svcCtx: svcCtx}
+	return &OkxGetFundingRateTool{
+		svcCtx:  svcCtx,
+		limiter: rate.NewLimiter(rate.Every(100*time.Millisecond), 2), // 10 req/s for Public endpoint
+	}
 }
