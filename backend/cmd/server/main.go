@@ -41,7 +41,7 @@ func main() {
 
 	svcCtx := svc.NewServiceContext(*cfg)
 
-	err = agent.InitAgents(svcCtx)
+	err = agent.InitAgents(ctx, svcCtx)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to init agents: %v\n", err)
 		os.Exit(1)
