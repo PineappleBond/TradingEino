@@ -28,6 +28,11 @@ func (c *OkxGetOrderHistoryTool) Info(ctx context.Context) (*schema.ToolInfo, er
 		Desc:  "Query historical orders (last 7 days) with optional time range and instrument filters",
 		Extra: map[string]any{},
 		ParamsOneOf: schema.NewParamsOneOfByParams(map[string]*schema.ParameterInfo{
+			"instType": {
+				Type:     schema.String,
+				Desc:     "Instrument type (SPOT/SWAP/FUTURES/OPTION/MARGIN), optional but recommended for filtering",
+				Required: false,
+			},
 			"instID": {
 				Type:     schema.String,
 				Desc:     "Instrument ID (e.g., ETH-USDT-SWAP), leave empty for all instruments",
@@ -55,6 +60,7 @@ func (c *OkxGetOrderHistoryTool) Info(ctx context.Context) (*schema.ToolInfo, er
 // InvokableRun executes the get order history tool
 func (c *OkxGetOrderHistoryTool) InvokableRun(ctx context.Context, argumentsInJSON string, opts ...tool.Option) (string, error) {
 	type Request struct {
+		InstType  string `json:"instType,omitempty"`
 		InstID    string `json:"instID,omitempty"`
 		StartTime string `json:"startTime,omitempty"`
 		EndTime   string `json:"endTime,omitempty"`
@@ -78,6 +84,11 @@ func (c *OkxGetOrderHistoryTool) InvokableRun(ctx context.Context, argumentsInJS
 		Limit:  float64(limit),
 	}
 
+	// Add instrument type if provided
+	if req.InstType != "" {
+		okxReq.InstType = okex.InstrumentType(req.InstType)
+	}
+
 	// Add time range filters if provided
 	if req.StartTime != "" {
 		// Parse start time as Unix milliseconds
@@ -98,22 +109,18 @@ func (c *OkxGetOrderHistoryTool) InvokableRun(ctx context.Context, argumentsInJS
 
 	// Wait for rate limiter before making API call
 	if err := c.limiter.Wait(ctx); err != nil {
-		return "", fmt.Errorf("rate limiter wait failed: %w", err)
+		return fmt.Sprintf("**订单历史查询失败**\n\n**错误类型：** 限流等待失败\n**错误信息：** %v", err), nil
 	}
 
 	// Get order history (arch=false for last 7 days)
 	resp, err := c.svcCtx.OKXClient.Rest.Trade.GetOrderHistory(okxReq, false)
 	if err != nil {
-		return "", err
+		return fmt.Sprintf("**订单历史查询失败**\n\n**错误类型：** API 调用失败\n**错误信息：** %v", err), nil
 	}
 
 	// Check response code (EXEC-06: sCode/sMsg validation)
-	if resp.Code != 0 {
-		return "", &okex.OKXError{
-			Code:     resp.Code,
-			Msg:      resp.Msg,
-			Endpoint: "GetOrderHistory",
-		}
+	if resp.Code.Int() != 0 {
+		return fmt.Sprintf("**订单历史查询失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** GetOrderHistory", resp.Code.Int(), resp.Msg), nil
 	}
 
 	// Empty result set is valid - return empty table
@@ -131,8 +138,8 @@ func (c *OkxGetOrderHistoryTool) formatOrderHistoryOutput(orders []*tradeModels.
 	output := ""
 	output += fmt.Sprintf("# Order History (%d orders)\n\n", len(orders))
 	output += "```markdown\n"
-	output += "| ordId | instId | side | posSide | ordType | size | avgPx | fillSize | state | cTime |\n"
-	output += "| :---- | :----- | :--- | :------ | :------ | :--- | :---- | :------- | :---- | :---- |\n"
+	output += "| ordId | instId | instType | side | posSide | ordType | size | avgPx | fillSize | state | cTime |\n"
+	output += "| :---- | :----- | :------- | :--- | :------ | :------ | :--- | :---- | :------- | :---- | :---- |\n"
 
 	for _, order := range orders {
 		avgPxStr := fmt.Sprintf("%.2f", float64(order.AvgPx))
@@ -145,9 +152,10 @@ func (c *OkxGetOrderHistoryTool) formatOrderHistoryOutput(orders []*tradeModels.
 		}
 		cTimeStr := time.Time(order.CTime).Format("2006-01-02 15:04:05")
 
-		output += fmt.Sprintf("| %s | %s | %s | %s | %s | %.2f | %s | %s | %s | %s |\n",
+		output += fmt.Sprintf("| %s | %s | %s | %s | %s | %s | %.2f | %s | %s | %s | %s |\n",
 			order.OrdID,
 			order.InstID,
+			order.InstType,
 			order.Side,
 			order.PosSide,
 			order.OrdType,

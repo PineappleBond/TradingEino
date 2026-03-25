@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
-	"github.com/PineappleBond/TradingEino/backend/pkg/okex"
 	tradeRequests "github.com/PineappleBond/TradingEino/backend/pkg/okex/requests/rest/trade"
 	"github.com/PineappleBond/TradingEino/backend/pkg/okex/models/trade"
 	"github.com/cloudwego/eino/components/tool"
@@ -64,7 +63,7 @@ func (c *OkxCancelOrderTool) InvokableRun(ctx context.Context, argumentsInJSON s
 
 	// Wait for rate limiter before making API call
 	if err := c.limiter.Wait(ctx); err != nil {
-		return "", fmt.Errorf("rate limiter wait failed: %w", err)
+		return fmt.Sprintf("**撤单失败**\n\n**错误类型：** 限流等待失败\n**错误信息：** %v\n**订单 ID：** %s", err, req.OrdID), nil
 	}
 
 	// Cancel the order
@@ -75,21 +74,17 @@ func (c *OkxCancelOrderTool) InvokableRun(ctx context.Context, argumentsInJSON s
 		},
 	})
 	if err != nil {
-		return "", err
+		return fmt.Sprintf("**撤单失败**\n\n**错误类型：** API 调用失败\n**错误信息：** %v\n**订单 ID：** %s\n**交易对：** %s", err, req.OrdID, req.InstID), nil
 	}
 
 	// Check response code
-	if resp.Code != 0 {
-		return "", &okex.OKXError{
-			Code:     resp.Code,
-			Msg:      resp.Msg,
-			Endpoint: "CancelOrder",
-		}
+	if resp.Code.Int() != 0 {
+		return fmt.Sprintf("**撤单失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** CancelOrder\n**订单 ID：** %s\n**交易对：** %s", resp.Code.Int(), resp.Msg, req.OrdID, req.InstID), nil
 	}
 
 	// Check for empty response
 	if len(resp.CancelOrders) == 0 {
-		return "", fmt.Errorf("cancel order failed: empty response")
+		return fmt.Sprintf("**撤单失败**\n\n**错误类型：** 空响应\n**订单 ID：** %s\n**交易对：** %s", req.OrdID, req.InstID), nil
 	}
 
 	result := resp.CancelOrders[0]
@@ -98,11 +93,7 @@ func (c *OkxCancelOrderTool) InvokableRun(ctx context.Context, argumentsInJSON s
 	sCode := float64(result.SCode)
 
 	if sCode != 0 {
-		return "", &okex.OKXError{
-			Code:     int(sCode),
-			Msg:      result.SMsg,
-			Endpoint: "CancelOrder",
-		}
+		return fmt.Sprintf("**撤单失败**\n\n**错误代码：** %.0f\n**错误信息：** %s\n**订单 ID：** %s\n**交易对：** %s", sCode, result.SMsg, req.OrdID, req.InstID), nil
 	}
 
 	// Format output as Markdown table

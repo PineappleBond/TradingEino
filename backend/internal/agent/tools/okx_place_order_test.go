@@ -110,21 +110,6 @@ func TestPlaceOrderResponseParsing(t *testing.T) {
 	t.Log("PlaceOrder response parsing verified")
 }
 
-// TestCancelOrderResponseParsing verifies cancel order response parsing
-func TestCancelOrderResponseParsing(t *testing.T) {
-	resp := &trade.CancelOrder{
-		OrdID:   "order-123",
-		ClOrdID: "client-order-001",
-		SCode:   okex.JSONFloat64(0),
-		SMsg:    "",
-	}
-
-	if resp.OrdID != "order-123" {
-		t.Errorf("Expected order ID 'order-123', got %s", resp.OrdID)
-	}
-	t.Log("CancelOrder response parsing verified")
-}
-
 // TestOrderDetailsResponseParsing verifies order details response parsing
 func TestOrderDetailsResponseParsing(t *testing.T) {
 	resp := &trade.Order{

@@ -75,9 +75,9 @@ func (c *OkxGetPositionsTool) InvokableRun(ctx context.Context, argumentsInJSON 
 		if err != nil {
 			return "", err
 		}
-		if getPositions.Code != 0 {
+		if getPositions.Code.Int() != 0 {
 			return "", &okex.OKXError{
-				Code:     getPositions.Code,
+				Code:     getPositions.Code.Int(),
 				Msg:      getPositions.Msg,
 				Endpoint: "GetPositions",
 			}
@@ -129,9 +129,9 @@ func (c *OkxGetPositionsTool) InvokableRun(ctx context.Context, argumentsInJSON 
 		if err != nil {
 			return "", err
 		}
-		if getMaxTradeAmount.Code != 0 {
+		if getMaxTradeAmount.Code.Int() != 0 {
 			return "", &okex.OKXError{
-				Code:     getMaxTradeAmount.Code,
+				Code:     getMaxTradeAmount.Code.Int(),
 				Msg:      getMaxTradeAmount.Msg,
 				Endpoint: "GetMaxBuySellAmount",
 			}

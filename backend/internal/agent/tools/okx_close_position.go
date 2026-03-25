@@ -107,21 +107,17 @@ func (c *OkxClosePositionTool) closeFullPosition(ctx context.Context, instID, po
 	// Call ClosePosition API
 	resp, err := c.svcCtx.OKXClient.Rest.Trade.ClosePosition(closeReq)
 	if err != nil {
-		return "", err
+		return fmt.Sprintf("**平仓失败**\n\n**错误类型：** API 调用失败\n**错误信息：** %v\n**交易对：** %s", err, instID), nil
 	}
 
 	// Check response code (EXEC-06: sCode/sMsg validation)
-	if resp.Code != 0 {
-		return "", &okex.OKXError{
-			Code:     resp.Code,
-			Msg:      resp.Msg,
-			Endpoint: "ClosePosition",
-		}
+	if resp.Code.Int() != 0 {
+		return fmt.Sprintf("**平仓失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** ClosePosition\n**交易对：** %s", resp.Code.Int(), resp.Msg, instID), nil
 	}
 
 	// Check for empty response
 	if len(resp.ClosePositions) == 0 {
-		return "", fmt.Errorf("close position failed: position not found or already closed")
+		return fmt.Sprintf("**平仓失败**\n\n**错误类型：** 仓位不存在或已平仓\n**交易对：** %s", instID), nil
 	}
 
 	result := resp.ClosePositions[0]
@@ -141,21 +137,17 @@ func (c *OkxClosePositionTool) closePartialPosition(ctx context.Context, instID,
 
 	// Wait for rate limiter for Account endpoint
 	if err := c.limiter.Wait(ctx); err != nil {
-		return "", fmt.Errorf("rate limiter wait failed: %w", err)
+		return fmt.Sprintf("**平仓失败**\n\n**错误类型：** 限流等待失败\n**错误信息：** %v", err), nil
 	}
 
 	posResp, err := c.svcCtx.OKXClient.Rest.Account.GetPositions(posReq)
 	if err != nil {
-		return "", err
+		return fmt.Sprintf("**平仓失败**\n\n**错误类型：** API 调用失败（查询仓位）\n**错误信息：** %v", err), nil
 	}
 
 	// Check response code
-	if posResp.Code != 0 {
-		return "", &okex.OKXError{
-			Code:     posResp.Code,
-			Msg:      posResp.Msg,
-			Endpoint: "GetPositions",
-		}
+	if posResp.Code.Int() != 0 {
+		return fmt.Sprintf("**平仓失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** GetPositions", posResp.Code.Int(), posResp.Msg), nil
 	}
 
 	// Find the position for the given instID and posSide
@@ -202,32 +194,24 @@ func (c *OkxClosePositionTool) closePartialPosition(ctx context.Context, instID,
 
 	orderResp, err := c.svcCtx.OKXClient.Rest.Trade.PlaceOrder([]tradeRequests.PlaceOrder{placeOrderReq})
 	if err != nil {
-		return "", err
+		return fmt.Sprintf("**平仓失败**\n\n**错误类型：** API 调用失败（下单）\n**错误信息：** %v", err), nil
 	}
 
 	// Check response code
-	if orderResp.Code != 0 {
-		return "", &okex.OKXError{
-			Code:     orderResp.Code,
-			Msg:      orderResp.Msg,
-			Endpoint: "PlaceOrder",
-		}
+	if orderResp.Code.Int() != 0 {
+		return fmt.Sprintf("**平仓失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** PlaceOrder", orderResp.Code.Int(), orderResp.Msg), nil
 	}
 
 	// Check for empty response
 	if len(orderResp.PlaceOrders) == 0 {
-		return "", fmt.Errorf("close order failed: empty response")
+		return "**平仓失败**\n\n**错误类型：** 空响应", nil
 	}
 
 	orderResult := orderResp.PlaceOrders[0]
 
 	// Check order-level sCode
 	if int64(orderResult.SCode) != 0 {
-		return "", &okex.OKXError{
-			Code:     int(int64(orderResult.SCode)),
-			Msg:      orderResult.SMsg,
-			Endpoint: "PlaceOrder",
-		}
+		return fmt.Sprintf("**平仓失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** PlaceOrder", int64(orderResult.SCode), orderResult.SMsg), nil
 	}
 
 	// Format output

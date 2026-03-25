@@ -40,12 +40,12 @@ func (c *OkxBatchPlaceOrderTool) Info(ctx context.Context) (*schema.ToolInfo, er
 // InvokableRun executes the batch place order tool
 func (c *OkxBatchPlaceOrderTool) InvokableRun(ctx context.Context, argumentsInJSON string, opts ...tool.Option) (string, error) {
 	type OrderRequest struct {
-		InstID  string `json:"instID"`
-		Side    string `json:"side"`
-		PosSide string `json:"posSide"`
-		OrdType string `json:"ordType"`
-		Size    string `json:"size"`
-		Price   string `json:"price,omitempty"`
+		InstID  string      `json:"instID"`
+		Side    string      `json:"side"`
+		PosSide string      `json:"posSide"`
+		OrdType string      `json:"ordType"`
+		Size    json.Number `json:"size"`
+		Price   string      `json:"price,omitempty"`
 	}
 
 	type Request struct {
@@ -95,7 +95,7 @@ func (c *OkxBatchPlaceOrderTool) InvokableRun(ctx context.Context, argumentsInJS
 			Side:    okex.OrderSide(order.Side),
 			PosSide: okex.PositionSide(order.PosSide),
 			OrdType: okex.OrderType(order.OrdType),
-			Sz:      order.Size,
+			Sz:      order.Size.String(),
 			Px:      order.Price,
 			TdMode:  okex.TradeCrossMode, // Default to cross margin mode
 		}
@@ -104,27 +104,24 @@ func (c *OkxBatchPlaceOrderTool) InvokableRun(ctx context.Context, argumentsInJS
 
 	// Wait for rate limiter before making API call
 	if err := c.limiter.Wait(ctx); err != nil {
-		return "", fmt.Errorf("rate limiter wait failed: %w", err)
+		return fmt.Sprintf("**批量下单失败**\n\n**错误类型：** 限流等待失败\n**错误信息：** %v", err), nil
 	}
 
 	// Place batch orders
 	resp, err := c.svcCtx.OKXClient.Rest.Trade.PlaceMultipleOrders(orders)
 	if err != nil {
-		return "", err
+		return fmt.Sprintf("**批量下单失败**\n\n**错误类型：** API 调用失败\n**错误信息：** %v", err), nil
 	}
 
-	// Check response code (EXEC-06: sCode/sMsg validation)
-	if resp.Code != 0 {
-		return "", &okex.OKXError{
-			Code:     resp.Code,
-			Msg:      resp.Msg,
-			Endpoint: "PlaceMultipleOrders",
-		}
+	// Check response code - code=0 means success, code=2 means partial success
+	// We handle partial success by returning the results
+	if resp.Code.Int() != 0 && resp.Code.Int() != 2 {
+		return fmt.Sprintf("**批量下单失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** PlaceMultipleOrders", resp.Code.Int(), resp.Msg), nil
 	}
 
 	// Check for empty response
 	if len(resp.PlaceOrders) == 0 {
-		return "", fmt.Errorf("batch place order failed: empty response")
+		return "**批量下单失败**\n\n**错误类型：** 空响应", nil
 	}
 
 	// Categorize results by sCode

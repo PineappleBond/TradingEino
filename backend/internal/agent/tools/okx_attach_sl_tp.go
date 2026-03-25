@@ -50,7 +50,19 @@ func (c *OkxAttachSlTpTool) Info(ctx context.Context) (*schema.ToolInfo, error) 
 			},
 			"ordId": {
 				Type:     schema.String,
-				Desc:     "已有订单 ID",
+				Desc:     "已有订单 ID（可选，用于参考）",
+				Required: false,
+			},
+			"side": {
+				Type:     schema.String,
+				Desc:     "订单方向：buy 或 sell",
+				Enum:     []string{"buy", "sell"},
+				Required: true,
+			},
+			"posSide": {
+				Type:     schema.String,
+				Desc:     "持仓方向：long, short, net",
+				Enum:     []string{"long", "short", "net"},
 				Required: true,
 			},
 			"slTriggerPx": {
@@ -60,7 +72,7 @@ func (c *OkxAttachSlTpTool) Info(ctx context.Context) (*schema.ToolInfo, error) 
 			},
 			"slOrderPx": {
 				Type:     schema.String,
-				Desc:     "止损委托价格，留空表示市价单",
+				Desc:     "止损委托价格，-1 表示市价单",
 				Required: false,
 			},
 			"tpTriggerPx": {
@@ -70,8 +82,13 @@ func (c *OkxAttachSlTpTool) Info(ctx context.Context) (*schema.ToolInfo, error) 
 			},
 			"tpOrderPx": {
 				Type:     schema.String,
-				Desc:     "止盈委托价格，留空表示市价单",
+				Desc:     "止盈委托价格，-1 表示市价单",
 				Required: false,
+			},
+			"sz": {
+				Type:     schema.String,
+				Desc:     "委托数量（需要满足最小订单金额要求）",
+				Required: true,
 			},
 		}),
 	}, nil
@@ -87,10 +104,13 @@ func (c *OkxAttachSlTpTool) InvokableRun(ctx context.Context, argsJSON string, o
 	var params struct {
 		InstID      string `json:"instID"`
 		OrdID       string `json:"ordId"`
+		Side        string `json:"side"`
+		PosSide     string `json:"posSide"`
 		SlTriggerPx string `json:"slTriggerPx"`
 		SlOrderPx   string `json:"slOrderPx"`
 		TpTriggerPx string `json:"tpTriggerPx"`
 		TpOrderPx   string `json:"tpOrderPx"`
+		Sz          string `json:"sz"`
 	}
 	if err := json.Unmarshal([]byte(argsJSON), &params); err != nil {
 		return "", fmt.Errorf("failed to unmarshal args: %w", err)
@@ -101,6 +121,7 @@ func (c *OkxAttachSlTpTool) InvokableRun(ctx context.Context, argsJSON string, o
 	tpTriggerPx := 0.0
 	slOrderPx := 0.0
 	tpOrderPx := 0.0
+	sz := 0.0
 
 	if params.SlTriggerPx != "" {
 		if _, err := fmt.Sscanf(params.SlTriggerPx, "%f", &slTriggerPx); err != nil {
@@ -108,7 +129,10 @@ func (c *OkxAttachSlTpTool) InvokableRun(ctx context.Context, argsJSON string, o
 		}
 	}
 	if params.SlOrderPx != "" {
-		if _, err := fmt.Sscanf(params.SlOrderPx, "%f", &slOrderPx); err != nil {
+		// -1 means market order for OKX
+		if params.SlOrderPx == "-1" {
+			slOrderPx = -1
+		} else if _, err := fmt.Sscanf(params.SlOrderPx, "%f", &slOrderPx); err != nil {
 			return "", fmt.Errorf("invalid slOrderPx format: %w", err)
 		}
 	}
@@ -118,8 +142,16 @@ func (c *OkxAttachSlTpTool) InvokableRun(ctx context.Context, argsJSON string, o
 		}
 	}
 	if params.TpOrderPx != "" {
-		if _, err := fmt.Sscanf(params.TpOrderPx, "%f", &tpOrderPx); err != nil {
+		// -1 means market order for OKX
+		if params.TpOrderPx == "-1" {
+			tpOrderPx = -1
+		} else if _, err := fmt.Sscanf(params.TpOrderPx, "%f", &tpOrderPx); err != nil {
 			return "", fmt.Errorf("invalid tpOrderPx format: %w", err)
+		}
+	}
+	if params.Sz != "" {
+		if _, err := fmt.Sscanf(params.Sz, "%f", &sz); err != nil {
+			return "", fmt.Errorf("invalid sz format: %w", err)
 		}
 	}
 
@@ -127,58 +159,119 @@ func (c *OkxAttachSlTpTool) InvokableRun(ctx context.Context, argsJSON string, o
 		return "", fmt.Errorf("at least one of slTriggerPx or tpTriggerPx must be provided")
 	}
 
-	// 4. Build PlaceAlgoOrder request with sl_tp order type
-	req := traderequests.PlaceAlgoOrder{
-		InstID:  params.InstID,
-		TdMode:  okex.TradeCrossMode, // default to cross mode
-		Side:    okex.OrderBuy,       // will be determined by the existing order
-		OrdType: okex.AlgoOrderConditional,
-		Sz:      0, // Not needed for attach SL/TP
-		StopOrder: traderequests.StopOrder{
-			SlTriggerPx: slTriggerPx,
-			SlOrdPx:     slOrderPx,
-			TpTriggerPx: tpTriggerPx,
-			TpOrdPx:     tpOrderPx,
-		},
+	// Parse side
+	var side okex.OrderSide
+	switch params.Side {
+	case "buy":
+		side = okex.OrderBuy
+	case "sell":
+		side = okex.OrderSell
+	default:
+		return "", fmt.Errorf("invalid side: %s", params.Side)
 	}
 
-	// 5. Call PlaceAlgoOrder API
-	var result traderesponses.PlaceAlgoOrder
-	var err error
+	// Helper function to create float64 pointer
+	floatPtr := func(v float64) *float64 { return &v }
 
-	if c.mockTrade != nil {
-		// Testing mode
-		result, err = c.mockTrade.PlaceAlgoOrder(req)
-	} else {
-		// Production mode
-		result, err = c.svcCtx.OKXClient.Rest.Trade.PlaceAlgoOrder(req)
-	}
+	// 4. Place SL and TP as separate orders (OKX doesn't support combined SL+TP in one order)
+	var results []traderesponses.PlaceAlgoOrder
 
-	if err != nil {
-		return "", fmt.Errorf("failed to place algo order: %w", err)
-	}
-
-	// 6. Validate OKX response code
-	if result.Code != 0 {
-		return "", &okex.OKXError{
-			Code:     result.Code,
-			Msg:      result.Msg,
-			Endpoint: "PlaceAlgoOrder",
+	// Place SL order if provided
+	if slTriggerPx > 0 {
+		slReq := traderequests.PlaceAlgoOrder{
+			InstID:     params.InstID,
+			TdMode:     okex.TradeCrossMode,
+			Side:       side,
+			PosSide:    okex.PositionSide(params.PosSide),
+			OrdType:    okex.AlgoOrderConditional,
+			Sz:         int64(sz),
+			ReduceOnly: true, // Must be true for closing position
+			StopOrder: traderequests.StopOrder{
+				SlTriggerPx: floatPtr(slTriggerPx),
+				SlOrdPx:     floatPtr(slOrderPx),
+				TpTriggerPx: nil, // No TP in SL order
+				TpOrdPx:     nil,
+			},
 		}
+
+		var slResult traderesponses.PlaceAlgoOrder
+		var err error
+
+		if c.mockTrade != nil {
+			slResult, err = c.mockTrade.PlaceAlgoOrder(slReq)
+		} else {
+			slResult, err = c.svcCtx.OKXClient.Rest.Trade.PlaceAlgoOrder(slReq)
+		}
+
+		if err != nil {
+			return fmt.Sprintf("**附加止损失败**\n\n**错误类型：** API 调用失败\n**错误信息：** %v", err), nil
+		}
+
+		if slResult.Code.Int() != 0 {
+			return fmt.Sprintf("**附加止损失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** PlaceAlgoOrder", slResult.Code.Int(), slResult.Msg), nil
+		}
+
+		if len(slResult.PlaceAlgoOrders) == 0 {
+			return "**附加止损失败**\n\n**错误类型：** 空响应", nil
+		}
+
+		slAlgoResult := slResult.PlaceAlgoOrders[0]
+		if slAlgoResult.SCode != 0 {
+			return fmt.Sprintf("**附加止损失败**\n\n**错误代码：** %d\n**错误信息：** %s", int64(slAlgoResult.SCode), slAlgoResult.SMsg), nil
+		}
+
+		results = append(results, slResult)
 	}
 
-	// 7. Validate algo order sCode/sMsg (EXEC-06)
-	if len(result.PlaceAlgoOrders) == 0 {
-		return "", fmt.Errorf("no algo order result returned")
+	// Place TP order if provided
+	if tpTriggerPx > 0 {
+		tpReq := traderequests.PlaceAlgoOrder{
+			InstID:     params.InstID,
+			TdMode:     okex.TradeCrossMode,
+			Side:       side,
+			PosSide:    okex.PositionSide(params.PosSide),
+			OrdType:    okex.AlgoOrderConditional,
+			Sz:         int64(sz),
+			ReduceOnly: true, // Must be true for closing position
+			StopOrder: traderequests.StopOrder{
+				SlTriggerPx: nil, // No SL in TP order
+				SlOrdPx:     nil,
+				TpTriggerPx: floatPtr(tpTriggerPx),
+				TpOrdPx:     floatPtr(tpOrderPx),
+			},
+		}
+
+		var tpResult traderesponses.PlaceAlgoOrder
+		var err error
+
+		if c.mockTrade != nil {
+			tpResult, err = c.mockTrade.PlaceAlgoOrder(tpReq)
+		} else {
+			tpResult, err = c.svcCtx.OKXClient.Rest.Trade.PlaceAlgoOrder(tpReq)
+		}
+
+		if err != nil {
+			return fmt.Sprintf("**附加止盈失败**\n\n**错误类型：** API 调用失败\n**错误信息：** %v", err), nil
+		}
+
+		if tpResult.Code.Int() != 0 {
+			return fmt.Sprintf("**附加止盈失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** PlaceAlgoOrder", tpResult.Code.Int(), tpResult.Msg), nil
+		}
+
+		if len(tpResult.PlaceAlgoOrders) == 0 {
+			return "**附加止盈失败**\n\n**错误类型：** 空响应", nil
+		}
+
+		tpAlgoResult := tpResult.PlaceAlgoOrders[0]
+		if tpAlgoResult.SCode != 0 {
+			return fmt.Sprintf("**附加止盈失败**\n\n**错误代码：** %d\n**错误信息：** %s", int64(tpAlgoResult.SCode), tpAlgoResult.SMsg), nil
+		}
+
+		results = append(results, tpResult)
 	}
 
-	algoResult := result.PlaceAlgoOrders[0]
-	if algoResult.SCode != 0 {
-		return "", fmt.Errorf("algo order failed: sCode=%d, sMsg=%s", int64(algoResult.SCode), algoResult.SMsg)
-	}
-
-	// 8. Format output as Markdown table
-	output := c.formatOutput(algoResult)
+	// 5. Format output as Markdown table with all results
+	output := c.formatOutputMultiple(results)
 	return output, nil
 }
 
@@ -196,6 +289,37 @@ func (c *OkxAttachSlTpTool) formatOutput(algoResult *trademodels.PlaceAlgoOrder)
 	table := xmd.CreateMarkdownTable(headers, rows)
 
 	output := "## SL/TP Order Attached\n\n"
+	output += "```markdown\n"
+	output += table
+	output += "\n```\n"
+
+	return output
+}
+
+// formatOutputMultiple formats multiple algo order results as a Markdown table
+func (c *OkxAttachSlTpTool) formatOutputMultiple(results []traderesponses.PlaceAlgoOrder) string {
+	headers := []string{"Type", "algoId", "sCode", "sMsg"}
+	rows := [][]string{}
+
+	for i, result := range results {
+		if len(result.PlaceAlgoOrders) > 0 {
+			algoResult := result.PlaceAlgoOrders[0]
+			orderType := "SL"
+			if i == 1 {
+				orderType = "TP"
+			}
+			rows = append(rows, []string{
+				orderType,
+				algoResult.AlgoID,
+				fmt.Sprintf("%d", int64(algoResult.SCode)),
+				algoResult.SMsg,
+			})
+		}
+	}
+
+	table := xmd.CreateMarkdownTable(headers, rows)
+
+	output := "## SL/TP Orders Attached\n\n"
 	output += "```markdown\n"
 	output += table
 	output += "\n```\n"

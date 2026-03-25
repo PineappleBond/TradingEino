@@ -174,18 +174,28 @@ func (c *OkxPlaceOrderWithSlTpTool) InvokableRun(ctx context.Context, argsJSON s
 	}
 
 	// 6. Build PlaceAlgoOrder request with conditional order type
+	sizeVal := 0.0
+	if params.Size != "" {
+		if _, err := fmt.Sscanf(params.Size, "%f", &sizeVal); err != nil {
+			return "", fmt.Errorf("invalid size format: %w", err)
+		}
+	}
+
+	// Helper function to create float64 pointer
+	floatPtr := func(v float64) *float64 { return &v }
+
 	req := traderequests.PlaceAlgoOrder{
 		InstID:  params.InstID,
 		TdMode:  okex.TradeCrossMode,
 		Side:    side,
 		PosSide: posSide,
 		OrdType: okex.AlgoOrderConditional,
-		Sz:      0,
+		Sz:      int64(sizeVal),
 		StopOrder: traderequests.StopOrder{
-			SlTriggerPx: slTriggerPx,
-			SlOrdPx:     slOrderPx,
-			TpTriggerPx: tpTriggerPx,
-			TpOrdPx:     tpOrderPx,
+			SlTriggerPx: floatPtr(slTriggerPx),
+			SlOrdPx:     floatPtr(slOrderPx),
+			TpTriggerPx: floatPtr(tpTriggerPx),
+			TpOrdPx:     floatPtr(tpOrderPx),
 		},
 	}
 
@@ -200,16 +210,17 @@ func (c *OkxPlaceOrderWithSlTpTool) InvokableRun(ctx context.Context, argsJSON s
 	}
 
 	if err != nil {
-		return "", fmt.Errorf("failed to place algo order: %w", err)
+		// Log the error and return formatted error message to Agent (not error)
+		// This allows Agent to see the failure and decide whether to retry
+		return fmt.Sprintf("**订单执行失败**\n\n**错误类型：** API 调用失败\n**错误信息：** %v\n**交易对：** %s\n**方向：** %s\n**数量：** %s",
+			err, params.InstID, params.Side, params.Size), nil
 	}
 
 	// 8. Validate OKX response code
-	if result.Code != 0 {
-		return "", &okex.OKXError{
-			Code:     result.Code,
-			Msg:      result.Msg,
-			Endpoint: "PlaceAlgoOrder",
-		}
+	if result.Code.Int() != 0 {
+		// Return formatted error message to Agent (not error)
+		return fmt.Sprintf("**订单执行失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** PlaceAlgoOrder\n**交易对：** %s\n**方向：** %s\n**数量：** %s",
+			result.Code.Int(), result.Msg, params.InstID, params.Side, params.Size), nil
 	}
 
 	// 9. Validate algo order sCode/sMsg (EXEC-06)
@@ -219,7 +230,9 @@ func (c *OkxPlaceOrderWithSlTpTool) InvokableRun(ctx context.Context, argsJSON s
 
 	algoResult := result.PlaceAlgoOrders[0]
 	if algoResult.SCode != 0 {
-		return "", fmt.Errorf("algo order failed: sCode=%d, sMsg=%s", int64(algoResult.SCode), algoResult.SMsg)
+		// Return formatted error message to Agent (not error)
+		return fmt.Sprintf("**订单执行失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**交易对：** %s\n**方向：** %s\n**数量：** %s",
+			int64(algoResult.SCode), algoResult.SMsg, params.InstID, params.Side, params.Size), nil
 	}
 
 	// 10. Format output as Markdown table

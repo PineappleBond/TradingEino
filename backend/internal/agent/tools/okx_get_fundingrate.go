@@ -59,9 +59,9 @@ func (c *OkxGetFundingRateTool) InvokableRun(ctx context.Context, argumentsInJSO
 		if err != nil {
 			return "", err
 		}
-		if getFundingRate.Code != 0 {
+		if getFundingRate.Code.Int() != 0 {
 			return "", &okex.OKXError{
-				Code:     getFundingRate.Code,
+				Code:     getFundingRate.Code.Int(),
 				Msg:      getFundingRate.Msg,
 				Endpoint: "GetFundingRate",
 			}

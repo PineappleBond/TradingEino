@@ -123,21 +123,22 @@ func (c *OkxPlaceOrderTool) InvokableRun(ctx context.Context, argumentsInJSON st
 		},
 	})
 	if err != nil {
-		return "", err
+		// Return formatted error message to Agent (not error)
+		return fmt.Sprintf("**订单执行失败**\n\n**错误类型：** API 调用失败\n**错误信息：** %v\n**交易对：** %s\n**方向：** %s\n**数量：** %s",
+			err, req.InstID, req.Side, req.Size), nil
 	}
 
 	// Check response code
-	if resp.Code != 0 {
-		return "", &okex.OKXError{
-			Code:     resp.Code,
-			Msg:      resp.Msg,
-			Endpoint: "PlaceOrder",
-		}
+	if resp.Code.Int() != 0 {
+		// Return formatted error message to Agent (not error)
+		return fmt.Sprintf("**订单执行失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** PlaceOrder\n**交易对：** %s\n**方向：** %s\n**数量：** %s",
+			resp.Code.Int(), resp.Msg, req.InstID, req.Side, req.Size), nil
 	}
 
 	// Check for empty response
 	if len(resp.PlaceOrders) == 0 {
-		return "", fmt.Errorf("place order failed: empty response")
+		return fmt.Sprintf("**订单执行失败**\n\n**错误类型：** 空响应\n**交易对：** %s\n**方向：** %s\n**数量：** %s",
+			req.InstID, req.Side, req.Size), nil
 	}
 
 	result := resp.PlaceOrders[0]
@@ -151,11 +152,9 @@ func (c *OkxPlaceOrderTool) InvokableRun(ctx context.Context, argumentsInJSON st
 	}
 
 	if sCode != 0 {
-		return "", &okex.OKXError{
-			Code:     int(sCode),
-			Msg:      result.SMsg,
-			Endpoint: "PlaceOrder",
-		}
+		// Return formatted error message to Agent (not error)
+		return fmt.Sprintf("**订单执行失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**交易对：** %s\n**方向：** %s\n**数量：** %s",
+			int(sCode), result.SMsg, req.InstID, req.Side, req.Size), nil
 	}
 
 	// Format output as Markdown table

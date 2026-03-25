@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
-	"github.com/PineappleBond/TradingEino/backend/pkg/okex"
 	tradeRequests "github.com/PineappleBond/TradingEino/backend/pkg/okex/requests/rest/trade"
 	"github.com/PineappleBond/TradingEino/backend/pkg/okex/models/trade"
 	"github.com/cloudwego/eino/components/tool"
@@ -64,7 +63,7 @@ func (c *OkxGetOrderTool) InvokableRun(ctx context.Context, argumentsInJSON stri
 
 	// Wait for rate limiter before making API call
 	if err := c.limiter.Wait(ctx); err != nil {
-		return "", fmt.Errorf("rate limiter wait failed: %w", err)
+		return fmt.Sprintf("**订单查询失败**\n\n**错误类型：** 限流等待失败\n**错误信息：** %v\n**订单 ID：** %s", err, req.OrdID), nil
 	}
 
 	// Get order details
@@ -73,21 +72,17 @@ func (c *OkxGetOrderTool) InvokableRun(ctx context.Context, argumentsInJSON stri
 		OrdID:  req.OrdID,
 	})
 	if err != nil {
-		return "", err
+		return fmt.Sprintf("**订单查询失败**\n\n**错误类型：** API 调用失败\n**错误信息：** %v\n**订单 ID：** %s\n**交易对：** %s", err, req.OrdID, req.InstID), nil
 	}
 
 	// Check response code
-	if resp.Code != 0 {
-		return "", &okex.OKXError{
-			Code:     resp.Code,
-			Msg:      resp.Msg,
-			Endpoint: "GetOrderDetail",
-		}
+	if resp.Code.Int() != 0 {
+		return fmt.Sprintf("**订单查询失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** GetOrderDetail\n**订单 ID：** %s\n**交易对：** %s", resp.Code.Int(), resp.Msg, req.OrdID, req.InstID), nil
 	}
 
 	// Check for empty response
 	if len(resp.Orders) == 0 {
-		return "", fmt.Errorf("order not found: %s", req.OrdID)
+		return fmt.Sprintf("**订单查询失败**\n\n**错误类型：** 订单不存在\n**订单 ID：** %s\n**交易对：** %s", req.OrdID, req.InstID), nil
 	}
 
 	order := resp.Orders[0]
