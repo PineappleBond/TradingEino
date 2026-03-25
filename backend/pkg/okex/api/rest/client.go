@@ -110,6 +110,40 @@ func (c *ClientRest) Do(method, path string, private bool, params ...map[string]
 	return c.client.Do(r)
 }
 
+func (c *ClientRest) DoBody(method, path string, private bool, body string) (*http.Response, error) {
+	u := fmt.Sprintf("%s%s", c.baseURL, path)
+	var (
+		r   *http.Request
+		err error
+	)
+	if method == http.MethodGet {
+		r, err = http.NewRequest(http.MethodGet, u, nil)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		r, err = http.NewRequest(method, u, bytes.NewBufferString(body))
+		if err != nil {
+			return nil, err
+		}
+		r.Header.Add("Content-Type", "application/json")
+	}
+	if err != nil {
+		return nil, err
+	}
+	if private {
+		timestamp, sign := c.sign(method, path, body)
+		r.Header.Add("OK-ACCESS-KEY", c.apiKey)
+		r.Header.Add("OK-ACCESS-PASSPHRASE", c.passphrase)
+		r.Header.Add("OK-ACCESS-SIGN", sign)
+		r.Header.Add("OK-ACCESS-TIMESTAMP", timestamp)
+	}
+	if c.destination == okex.DemoServer {
+		r.Header.Add("x-simulated-trading", "1")
+	}
+	return c.client.Do(r)
+}
+
 func (c *ClientRest) DoSliceBody(method, path string, private bool, params []map[string]string) (*http.Response, error) {
 	u := fmt.Sprintf("%s%s", c.baseURL, path)
 	var (

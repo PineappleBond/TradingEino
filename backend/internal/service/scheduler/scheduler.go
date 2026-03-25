@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/PineappleBond/TradingEino/backend/internal/cronutil"
 	"github.com/PineappleBond/TradingEino/backend/internal/logger"
 	"github.com/PineappleBond/TradingEino/backend/internal/model"
 	"github.com/PineappleBond/TradingEino/backend/internal/repository"
@@ -238,13 +239,7 @@ func (s *Scheduler) addToCron(task *model.CronTask) error {
 
 // getNextExecutionTime 计算下次执行时间（支持 6 位 cron 表达式）
 func (s *Scheduler) getNextExecutionTime(spec string) (time.Time, error) {
-	// 使用与 cron 实例相同的解析器
-	parser := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
-	schedule, err := parser.Parse(spec)
-	if err != nil {
-		return time.Time{}, err
-	}
-	return schedule.Next(time.Now()), nil
+	return cronutil.GetNextExecutionTime(spec)
 }
 
 // onTaskTrigger 任务触发时的回调

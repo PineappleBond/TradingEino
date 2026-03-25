@@ -1,6 +1,6 @@
 # Phase 3: Execution Automation - Context
 
-**Gathered:** 2026-03-24
+**Gathered:** 2026-03-25
 **Status:** Ready for planning
 
 <domain>
@@ -12,9 +12,10 @@
 1. 用户可通过 `okx-place-order-tool` 下达限价单和市价单
 2. 用户可通过 `okx-cancel-order-tool` 取消待处理订单
 3. 用户可通过 `okx-get-order-tool` 查询订单状态
-4. Executor Agent 仅在 OKXWatcher 明确指令下执行交易（Level 1 自主性）
-5. 止损/止盈订单使用 OKX 原生 `sl_tp` 算法订单类型
-6. 订单响应验证 OKX `sCode`/`sMsg` 字段（检测静默失败）
+4. 用户可通过 `okx-close-position-tool` 平仓（支持全部平仓和部分平仓）
+5. Executor Agent 作为 OKXWatcher 的 SubAgents 集成，仅在 OKXWatcher 明确指令下执行交易（Level 1 自主性）
+6. 止损/止盈订单使用 OKX 原生 `sl_tp` 算法订单类型
+7. 订单响应验证 OKX `sCode`/`sMsg` 字段（检测静默失败）
 
 </domain>
 
@@ -103,20 +104,20 @@
 
 **Executor Agent：**
 - **类型**：ChatModelAgent（和 RiskOfficer、SentimentAnalyst 一致）
-- **名称**：`ExecutorAgent` 或 `TradingExecutor`
+- **名称**：`ExecutorAgent`
 - **自主性级别**：Level 1 — 仅执行 OKXWatcher 的明确指令，不主动分析市场或发起交易
+- **集成方式**：作为 OKXWatcher 的第 5 个 SubAgents 集成（与 TechnoAgent、FlowAnalyzer、PositionManager、SentimentAnalyst 并列）
 - **工具调用权限**：只有 Executor Agent 可以调用订单工具（通过工具描述约束，非技术强制）
-- **风控检查**：Executor 不需要内置风控检查，由 OKXWatcher 负责协调 RiskOfficer
 
 **OKXWatcher 与 Executor 交互模式：**
 ```
 OKXWatcher (DeepAgent 协调器)
     ↓
-    | 1. 咨询 RiskOfficer（风控检查）
+    | 1. 分析市场（调用 TechnoAgent、FlowAnalyzer 等）
     ↓
-    | 2. 下达明确交易指令给 Executor
+    | 2. 下达明确交易指令给 ExecutorAgent
     ↓
-ExecutorAgent (ChatModelAgent)
+ExecutorAgent (ChatModelAgent - SubAgents)
     ↓
     | 3. 调用订单工具执行交易
     ↓
@@ -226,9 +227,9 @@ ExecutorAgent (ChatModelAgent)
 - **Agent 模式**：OKXWatcher 使用 DeepAgent，SubAgents 使用 ChatModelAgent
 
 ### 集成点
-- **Executor Agent**：需要添加到 `internal/agent/agents.go` 的 AgentsModel 结构
-- **订单工具**：需要添加到 `internal/agent/tools/` 目录
-- **配置更新**：`etc/config.yaml` 需要配置 Executor Agent 和订单工具
+- **Executor Agent → OKXWatcher SubAgents** — 需要在 `agents.go:91-95` 添加 ExecutorAgent 到 OKXWatcher 的 SubAgents 列表
+- **订单工具** — 已实现到 `internal/agent/tools/` 目录
+- **配置更新** — `etc/config.yaml` 已配置 Executor Agent 和订单工具
 
 </code_context>
 
@@ -247,7 +248,6 @@ ExecutorAgent (ChatModelAgent)
 
 - **订单修改功能**（amend-order）— 不需要，先撤单再下单即可
 - **订单超时取消机制** — 不需要，由 Agent 自行调用 cancel-order
-- **一键关闭全部仓位工具** — 需要 close-position 工具（支持部分平仓），属于 Phase 3
 - **WebSocket 订单状态推送** — Phase 3 不涉及，Agent 主动查询
 - **前端订单管理界面** — Phase 3 不涉及前端
 
@@ -256,4 +256,6 @@ ExecutorAgent (ChatModelAgent)
 ---
 
 *Phase: 03-execution-automation*
-*Context gathered: 2026-03-24*
+*Context gathered: 2026-03-25*
+*Context updated: 2026-03-25 - 确认 ExecutorAgent 需添加为 OKXWatcher 的第 5 个 SubAgents*
+*Context updated: 2026-03-25 - 已修复：ExecutorAgent 已集成到 OKXWatcher SubAgents (commit 17fdf41)*

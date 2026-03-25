@@ -3,6 +3,7 @@ package response
 import (
 	"time"
 
+	"github.com/PineappleBond/TradingEino/backend/internal/cronutil"
 	"github.com/PineappleBond/TradingEino/backend/internal/model"
 )
 
@@ -28,6 +29,7 @@ type CronTaskResponse struct {
 }
 
 // ToCronTaskResponse 将 model.CronTask 转换为 CronTaskResponse
+// 对于周期性任务 (recurring)，会自动计算下次执行时间
 func ToCronTaskResponse(task *model.CronTask) *CronTaskResponse {
 	resp := &CronTaskResponse{
 		ID:              task.ID,
@@ -56,6 +58,14 @@ func ToCronTaskResponse(task *model.CronTask) *CronTaskResponse {
 	}
 	if task.NextExecutionAt.Valid {
 		resp.NextExecutionAt = &task.NextExecutionAt.Time
+	}
+
+	// 对于周期性任务，如果数据库中未设置下次执行时间，计算下次执行时间
+	if task.Type == model.TaskTypeRecurring && resp.NextExecutionAt == nil {
+		nextExec, err := cronutil.GetNextExecutionTime(task.Spec)
+		if err == nil {
+			resp.NextExecutionAt = &nextExec
+		}
 	}
 
 	return resp

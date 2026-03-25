@@ -58,19 +58,14 @@ func (c *OkxPlaceOrderWithSlTpTool) Info(ctx context.Context) (*schema.ToolInfo,
 			},
 			"ordType": {
 				Type:     schema.String,
-				Desc:     "主订单类型：market/limit/post_only/fok/ioc",
-				Enum:     []string{"market", "limit", "post_only", "fok", "ioc"},
+				Desc:     "订单类型：conditional (条件单)",
+				Enum:     []string{"conditional"},
 				Required: true,
 			},
 			"size": {
 				Type:     schema.String,
 				Desc:     "主订单数量",
 				Required: true,
-			},
-			"price": {
-				Type:     schema.String,
-				Desc:     "主订单价格（limit/post_only 必填）",
-				Required: false,
 			},
 			"slTriggerPx": {
 				Type:     schema.String,
@@ -79,7 +74,7 @@ func (c *OkxPlaceOrderWithSlTpTool) Info(ctx context.Context) (*schema.ToolInfo,
 			},
 			"slOrderPx": {
 				Type:     schema.String,
-				Desc:     "止损委托价格，留空表示市价单",
+				Desc:     "止损委托价格，留空或 -1 表示市价单",
 				Required: false,
 			},
 			"tpTriggerPx": {
@@ -89,7 +84,7 @@ func (c *OkxPlaceOrderWithSlTpTool) Info(ctx context.Context) (*schema.ToolInfo,
 			},
 			"tpOrderPx": {
 				Type:     schema.String,
-				Desc:     "止盈委托价格，留空表示市价单",
+				Desc:     "止盈委托价格，留空或 -1 表示市价单",
 				Required: false,
 			},
 		}),
@@ -126,6 +121,8 @@ func (c *OkxPlaceOrderWithSlTpTool) InvokableRun(ctx context.Context, argsJSON s
 	tpTriggerPx := 0.0
 	slOrderPx := 0.0
 	tpOrderPx := 0.0
+	hasSlOrderPx := false
+	hasTpOrderPx := false
 
 	if params.SlTriggerPx != "" {
 		if _, err := fmt.Sscanf(params.SlTriggerPx, "%f", &slTriggerPx); err != nil {
@@ -133,7 +130,11 @@ func (c *OkxPlaceOrderWithSlTpTool) InvokableRun(ctx context.Context, argsJSON s
 		}
 	}
 	if params.SlOrderPx != "" {
-		if _, err := fmt.Sscanf(params.SlOrderPx, "%f", &slOrderPx); err != nil {
+		hasSlOrderPx = true
+		// -1 means market order for OKX
+		if params.SlOrderPx == "-1" {
+			slOrderPx = -1
+		} else if _, err := fmt.Sscanf(params.SlOrderPx, "%f", &slOrderPx); err != nil {
 			return "", fmt.Errorf("invalid slOrderPx format: %w", err)
 		}
 	}
@@ -143,7 +144,11 @@ func (c *OkxPlaceOrderWithSlTpTool) InvokableRun(ctx context.Context, argsJSON s
 		}
 	}
 	if params.TpOrderPx != "" {
-		if _, err := fmt.Sscanf(params.TpOrderPx, "%f", &tpOrderPx); err != nil {
+		hasTpOrderPx = true
+		// -1 means market order for OKX
+		if params.TpOrderPx == "-1" {
+			tpOrderPx = -1
+		} else if _, err := fmt.Sscanf(params.TpOrderPx, "%f", &tpOrderPx); err != nil {
 			return "", fmt.Errorf("invalid tpOrderPx format: %w", err)
 		}
 	}
@@ -184,22 +189,30 @@ func (c *OkxPlaceOrderWithSlTpTool) InvokableRun(ctx context.Context, argsJSON s
 		}
 	}
 
-	// Helper function to create float64 pointer
-	floatPtr := func(v float64) *float64 { return &v }
-
 	req := traderequests.PlaceAlgoOrder{
-		InstID:  params.InstID,
-		TdMode:  okex.TradeCrossMode,
-		Side:    side,
-		PosSide: posSide,
-		OrdType: okex.AlgoOrderConditional,
-		Sz:      int64(sizeVal),
-		StopOrder: traderequests.StopOrder{
-			SlTriggerPx: floatPtr(slTriggerPx),
-			SlOrdPx:     floatPtr(slOrderPx),
-			TpTriggerPx: floatPtr(tpTriggerPx),
-			TpOrdPx:     floatPtr(tpOrderPx),
-		},
+		InstID:    params.InstID,
+		TdMode:    okex.TradeCrossMode,
+		Side:      side,
+		PosSide:   posSide,
+		OrdType:   okex.AlgoOrderConditional,
+		Sz:        int64(sizeVal),
+		StopOrder: traderequests.StopOrder{},
+	}
+
+	// Only set trigger prices if provided (non-zero)
+	if slTriggerPx > 0 {
+		req.SlTriggerPx = &slTriggerPx
+	}
+	if tpTriggerPx > 0 {
+		req.TpTriggerPx = &tpTriggerPx
+	}
+
+	// Only set order prices if explicitly provided
+	if hasSlOrderPx {
+		req.SlOrdPx = &slOrderPx
+	}
+	if hasTpOrderPx {
+		req.TpOrdPx = &tpOrderPx
 	}
 
 	// 7. Call PlaceAlgoOrder API
@@ -300,10 +313,18 @@ func (c *OkxPlaceOrderWithSlTpTool) formatOutput(algoResult *trademodels.PlaceAl
 		output += "\n### Stop-Loss/Take-Profit Details\n\n"
 		output += "```markdown\n"
 		if params.SlTriggerPx != "" {
-			output += fmt.Sprintf("- Stop-Loss: Trigger=%s, Order=%s\n", params.SlTriggerPx, coalesce(params.SlOrderPx, "Market"))
+			slOrderPxDisplay := coalesce(params.SlOrderPx, "-1")
+			if slOrderPxDisplay == "-1" {
+				slOrderPxDisplay = "Market"
+			}
+			output += fmt.Sprintf("- Stop-Loss: Trigger=%s, Order=%s\n", params.SlTriggerPx, slOrderPxDisplay)
 		}
 		if params.TpTriggerPx != "" {
-			output += fmt.Sprintf("- Take-Profit: Trigger=%s, Order=%s\n", params.TpTriggerPx, coalesce(params.TpOrderPx, "Market"))
+			tpOrderPxDisplay := coalesce(params.TpOrderPx, "-1")
+			if tpOrderPxDisplay == "-1" {
+				tpOrderPxDisplay = "Market"
+			}
+			output += fmt.Sprintf("- Take-Profit: Trigger=%s, Order=%s\n", params.TpTriggerPx, tpOrderPxDisplay)
 		}
 		output += "\n```\n"
 	}

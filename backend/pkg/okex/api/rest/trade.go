@@ -46,17 +46,25 @@ func (c *Trade) PlaceOrder(req []requests.PlaceOrder) (response responses.PlaceO
 }
 
 // PlaceMultipleOrders
-// Cancel an incomplete order.
+// Place multiple orders (max 20) in a single batch call.
 //
-// https://www.okex.com/docs-v5/en/#rest-api-trade-place-multiple-orders
+// https://www.okx.com/docs-v5/en/#order-book-trading-trade-post-place-multiple-orders
 func (c *Trade) PlaceMultipleOrders(req []requests.PlaceOrder) (response responses.PlaceOrder, err error) {
-	p := "/api/v5/trade/batch-order"
-	m := okex.S2M(req)
-	res, err := c.client.Do(http.MethodPost, p, true, m)
+	p := "/api/v5/trade/batch-orders"
+
+	// Marshal request body directly to preserve correct field types
+	body, err := json.Marshal(req)
+	if err != nil {
+		return
+	}
+
+	res, err := c.client.DoBody(http.MethodPost, p, true, string(body))
 	if err != nil {
 		return
 	}
 	defer res.Body.Close()
+
+	// Decode response
 	d := json.NewDecoder(res.Body)
 	err = d.Decode(&response)
 
