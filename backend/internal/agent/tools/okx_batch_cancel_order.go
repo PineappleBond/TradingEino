@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/PineappleBond/TradingEino/backend/internal/logger"
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
 	tradeRequests "github.com/PineappleBond/TradingEino/backend/pkg/okex/requests/rest/trade"
 	tradeModels "github.com/PineappleBond/TradingEino/backend/pkg/okex/models/trade"
@@ -83,22 +84,26 @@ func (c *OkxBatchCancelOrderTool) InvokableRun(ctx context.Context, argumentsInJ
 
 	// Wait for rate limiter before making API call
 	if err := c.limiter.Wait(ctx); err != nil {
+		logger.Errorf(ctx, "okx-batch-cancel-order: rate limiter wait failed", err)
 		return fmt.Sprintf("**批量撤单失败**\n\n**错误类型：** 限流等待失败\n**错误信息：** %v", err), nil
 	}
 
 	// Cancel batch orders (CandleOrder handles batch when len > 1)
 	resp, err := c.svcCtx.OKXClient.Rest.Trade.CandleOrder(orders)
 	if err != nil {
+		logger.Errorf(ctx, "okx-batch-cancel-order: API call failed", err)
 		return fmt.Sprintf("**批量撤单失败**\n\n**错误类型：** API 调用失败\n**错误信息：** %v", err), nil
 	}
 
 	// Check response code (EXEC-06: sCode/sMsg validation)
 	if resp.Code.Int() != 0 {
+		logger.Errorf(ctx, "okx-batch-cancel-order: response code error", nil, "code", resp.Code.Int(), "msg", resp.Msg)
 		return fmt.Sprintf("**批量撤单失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** CandleOrder", resp.Code.Int(), resp.Msg), nil
 	}
 
 	// Check for empty response
 	if len(resp.CancelOrders) == 0 {
+		logger.Errorf(ctx, "okx-batch-cancel-order: empty response", nil)
 		return "**批量撤单失败**\n\n**错误类型：** 空响应", nil
 	}
 

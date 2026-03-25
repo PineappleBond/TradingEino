@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/PineappleBond/TradingEino/backend/internal/logger"
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
 	tradeRequests "github.com/PineappleBond/TradingEino/backend/pkg/okex/requests/rest/trade"
 	"github.com/PineappleBond/TradingEino/backend/pkg/okex/models/trade"
@@ -63,6 +64,7 @@ func (c *OkxCancelOrderTool) InvokableRun(ctx context.Context, argumentsInJSON s
 
 	// Wait for rate limiter before making API call
 	if err := c.limiter.Wait(ctx); err != nil {
+		logger.Errorf(ctx, "okx-cancel-order: rate limiter wait failed", err, "ordID", req.OrdID)
 		return fmt.Sprintf("**撤单失败**\n\n**错误类型：** 限流等待失败\n**错误信息：** %v\n**订单 ID：** %s", err, req.OrdID), nil
 	}
 
@@ -74,16 +76,19 @@ func (c *OkxCancelOrderTool) InvokableRun(ctx context.Context, argumentsInJSON s
 		},
 	})
 	if err != nil {
+		logger.Errorf(ctx, "okx-cancel-order: API call failed", err, "instID", req.InstID, "ordID", req.OrdID)
 		return fmt.Sprintf("**撤单失败**\n\n**错误类型：** API 调用失败\n**错误信息：** %v\n**订单 ID：** %s\n**交易对：** %s", err, req.OrdID, req.InstID), nil
 	}
 
 	// Check response code
 	if resp.Code.Int() != 0 {
+		logger.Errorf(ctx, "okx-cancel-order: response code error", nil, "instID", req.InstID, "ordID", req.OrdID, "code", resp.Code.Int(), "msg", resp.Msg)
 		return fmt.Sprintf("**撤单失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** CancelOrder\n**订单 ID：** %s\n**交易对：** %s", resp.Code.Int(), resp.Msg, req.OrdID, req.InstID), nil
 	}
 
 	// Check for empty response
 	if len(resp.CancelOrders) == 0 {
+		logger.Errorf(ctx, "okx-cancel-order: empty response", nil, "instID", req.InstID, "ordID", req.OrdID)
 		return fmt.Sprintf("**撤单失败**\n\n**错误类型：** 空响应\n**订单 ID：** %s\n**交易对：** %s", req.OrdID, req.InstID), nil
 	}
 
@@ -93,6 +98,7 @@ func (c *OkxCancelOrderTool) InvokableRun(ctx context.Context, argumentsInJSON s
 	sCode := float64(result.SCode)
 
 	if sCode != 0 {
+		logger.Errorf(ctx, "okx-cancel-order: order-level sCode error", nil, "instID", req.InstID, "ordID", req.OrdID, "sCode", sCode, "sMsg", result.SMsg)
 		return fmt.Sprintf("**撤单失败**\n\n**错误代码：** %.0f\n**错误信息：** %s\n**订单 ID：** %s\n**交易对：** %s", sCode, result.SMsg, req.OrdID, req.InstID), nil
 	}
 

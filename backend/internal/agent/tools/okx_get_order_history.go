@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/PineappleBond/TradingEino/backend/internal/logger"
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
 	"github.com/PineappleBond/TradingEino/backend/pkg/okex"
 	tradeRequests "github.com/PineappleBond/TradingEino/backend/pkg/okex/requests/rest/trade"
@@ -109,17 +110,20 @@ func (c *OkxGetOrderHistoryTool) InvokableRun(ctx context.Context, argumentsInJS
 
 	// Wait for rate limiter before making API call
 	if err := c.limiter.Wait(ctx); err != nil {
+		logger.Errorf(ctx, "okx-get-order-history: rate limiter wait failed", err)
 		return fmt.Sprintf("**订单历史查询失败**\n\n**错误类型：** 限流等待失败\n**错误信息：** %v", err), nil
 	}
 
 	// Get order history (arch=false for last 7 days)
 	resp, err := c.svcCtx.OKXClient.Rest.Trade.GetOrderHistory(okxReq, false)
 	if err != nil {
+		logger.Errorf(ctx, "okx-get-order-history: API call failed", err)
 		return fmt.Sprintf("**订单历史查询失败**\n\n**错误类型：** API 调用失败\n**错误信息：** %v", err), nil
 	}
 
 	// Check response code (EXEC-06: sCode/sMsg validation)
 	if resp.Code.Int() != 0 {
+		logger.Errorf(ctx, "okx-get-order-history: response code error", nil, "code", resp.Code.Int(), "msg", resp.Msg)
 		return fmt.Sprintf("**订单历史查询失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** GetOrderHistory", resp.Code.Int(), resp.Msg), nil
 	}
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/PineappleBond/TradingEino/backend/internal/logger"
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
 	"github.com/PineappleBond/TradingEino/backend/pkg/okex"
 	tradeRequests "github.com/PineappleBond/TradingEino/backend/pkg/okex/requests/rest/trade"
@@ -107,7 +108,10 @@ func (c *OkxPlaceOrderTool) InvokableRun(ctx context.Context, argumentsInJSON st
 
 	// Wait for rate limiter before making API call
 	if err := c.limiter.Wait(ctx); err != nil {
-		return "", fmt.Errorf("rate limiter wait failed: %w", err)
+		logger.Errorf(ctx, "okx-place-order: rate limiter wait failed", err,
+			"instID", req.InstID, "side", req.Side, "size", req.Size)
+		return fmt.Sprintf("**订单执行失败**\n\n**错误类型：** 限流等待失败\n**错误信息：** %v\n**交易对：** %s\n**方向：** %s\n**数量：** %s",
+			err, req.InstID, req.Side, req.Size), nil
 	}
 
 	// Place the order
@@ -123,6 +127,8 @@ func (c *OkxPlaceOrderTool) InvokableRun(ctx context.Context, argumentsInJSON st
 		},
 	})
 	if err != nil {
+		logger.Errorf(ctx, "okx-place-order: API call failed", err,
+			"instID", req.InstID, "side", req.Side, "size", req.Size)
 		// Return formatted error message to Agent (not error)
 		return fmt.Sprintf("**订单执行失败**\n\n**错误类型：** API 调用失败\n**错误信息：** %v\n**交易对：** %s\n**方向：** %s\n**数量：** %s",
 			err, req.InstID, req.Side, req.Size), nil
@@ -130,6 +136,8 @@ func (c *OkxPlaceOrderTool) InvokableRun(ctx context.Context, argumentsInJSON st
 
 	// Check response code
 	if resp.Code.Int() != 0 {
+		logger.Errorf(ctx, "okx-place-order: response code error", err,
+			"instID", req.InstID, "side", req.Side, "size", req.Size, "code", resp.Code.Int(), "msg", resp.Msg)
 		// Return formatted error message to Agent (not error)
 		return fmt.Sprintf("**订单执行失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** PlaceOrder\n**交易对：** %s\n**方向：** %s\n**数量：** %s",
 			resp.Code.Int(), resp.Msg, req.InstID, req.Side, req.Size), nil
@@ -137,6 +145,8 @@ func (c *OkxPlaceOrderTool) InvokableRun(ctx context.Context, argumentsInJSON st
 
 	// Check for empty response
 	if len(resp.PlaceOrders) == 0 {
+		logger.Errorf(ctx, "okx-place-order: empty response", nil,
+			"instID", req.InstID, "side", req.Side, "size", req.Size)
 		return fmt.Sprintf("**订单执行失败**\n\n**错误类型：** 空响应\n**交易对：** %s\n**方向：** %s\n**数量：** %s",
 			req.InstID, req.Side, req.Size), nil
 	}
@@ -152,6 +162,8 @@ func (c *OkxPlaceOrderTool) InvokableRun(ctx context.Context, argumentsInJSON st
 	}
 
 	if sCode != 0 {
+		logger.Errorf(ctx, "okx-place-order: order-level sCode error", nil,
+			"instID", req.InstID, "side", req.Side, "size", req.Size, "sCode", sCode, "sMsg", result.SMsg)
 		// Return formatted error message to Agent (not error)
 		return fmt.Sprintf("**订单执行失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**交易对：** %s\n**方向：** %s\n**数量：** %s",
 			int(sCode), result.SMsg, req.InstID, req.Side, req.Size), nil

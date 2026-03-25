@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/PineappleBond/TradingEino/backend/internal/logger"
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
 	"github.com/PineappleBond/TradingEino/backend/internal/utils/xmd"
 	"github.com/PineappleBond/TradingEino/backend/pkg/okex"
@@ -97,7 +98,8 @@ func (c *OkxAttachSlTpTool) Info(ctx context.Context) (*schema.ToolInfo, error) 
 func (c *OkxAttachSlTpTool) InvokableRun(ctx context.Context, argsJSON string, opts ...tool.Option) (string, error) {
 	// 1. Wait for rate limiter
 	if err := c.limiter.Wait(ctx); err != nil {
-		return "", fmt.Errorf("rate limiter wait failed: %w", err)
+		logger.Errorf(ctx, "okx-attach-sl-tp: rate limiter wait failed", err)
+		return fmt.Sprintf("**附加 SL/TP 失败**\n\n**错误类型：** 限流等待失败\n**错误信息：** %v", err), nil
 	}
 
 	// 2. Parse JSON arguments
@@ -113,6 +115,7 @@ func (c *OkxAttachSlTpTool) InvokableRun(ctx context.Context, argsJSON string, o
 		Sz          string `json:"sz"`
 	}
 	if err := json.Unmarshal([]byte(argsJSON), &params); err != nil {
+		logger.Errorf(ctx, "okx-attach-sl-tp: failed to parse arguments", err)
 		return "", fmt.Errorf("failed to unmarshal args: %w", err)
 	}
 
@@ -204,19 +207,23 @@ func (c *OkxAttachSlTpTool) InvokableRun(ctx context.Context, argsJSON string, o
 		}
 
 		if err != nil {
+			logger.Errorf(ctx, "okx-attach-sl-tp: failed to place SL order", err, "instID", params.InstID, "side", params.Side, "posSide", params.PosSide)
 			return fmt.Sprintf("**附加止损失败**\n\n**错误类型：** API 调用失败\n**错误信息：** %v", err), nil
 		}
 
 		if slResult.Code.Int() != 0 {
+			logger.Errorf(ctx, "okx-attach-sl-tp: SL order response code error", nil, "instID", params.InstID, "code", slResult.Code.Int(), "msg", slResult.Msg)
 			return fmt.Sprintf("**附加止损失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** PlaceAlgoOrder", slResult.Code.Int(), slResult.Msg), nil
 		}
 
 		if len(slResult.PlaceAlgoOrders) == 0 {
+			logger.Errorf(ctx, "okx-attach-sl-tp: SL order empty response", nil, "instID", params.InstID)
 			return "**附加止损失败**\n\n**错误类型：** 空响应", nil
 		}
 
 		slAlgoResult := slResult.PlaceAlgoOrders[0]
 		if slAlgoResult.SCode != 0 {
+			logger.Errorf(ctx, "okx-attach-sl-tp: SL order sCode error", nil, "instID", params.InstID, "sCode", slAlgoResult.SCode, "sMsg", slAlgoResult.SMsg)
 			return fmt.Sprintf("**附加止损失败**\n\n**错误代码：** %d\n**错误信息：** %s", int64(slAlgoResult.SCode), slAlgoResult.SMsg), nil
 		}
 
@@ -251,19 +258,23 @@ func (c *OkxAttachSlTpTool) InvokableRun(ctx context.Context, argsJSON string, o
 		}
 
 		if err != nil {
+			logger.Errorf(ctx, "okx-attach-sl-tp: failed to place TP order", err, "instID", params.InstID, "side", params.Side, "posSide", params.PosSide)
 			return fmt.Sprintf("**附加止盈失败**\n\n**错误类型：** API 调用失败\n**错误信息：** %v", err), nil
 		}
 
 		if tpResult.Code.Int() != 0 {
+			logger.Errorf(ctx, "okx-attach-sl-tp: TP order response code error", nil, "instID", params.InstID, "code", tpResult.Code.Int(), "msg", tpResult.Msg)
 			return fmt.Sprintf("**附加止盈失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** PlaceAlgoOrder", tpResult.Code.Int(), tpResult.Msg), nil
 		}
 
 		if len(tpResult.PlaceAlgoOrders) == 0 {
+			logger.Errorf(ctx, "okx-attach-sl-tp: TP order empty response", nil, "instID", params.InstID)
 			return "**附加止盈失败**\n\n**错误类型：** 空响应", nil
 		}
 
 		tpAlgoResult := tpResult.PlaceAlgoOrders[0]
 		if tpAlgoResult.SCode != 0 {
+			logger.Errorf(ctx, "okx-attach-sl-tp: TP order sCode error", nil, "instID", params.InstID, "sCode", tpAlgoResult.SCode, "sMsg", tpAlgoResult.SMsg)
 			return fmt.Sprintf("**附加止盈失败**\n\n**错误代码：** %d\n**错误信息：** %s", int64(tpAlgoResult.SCode), tpAlgoResult.SMsg), nil
 		}
 

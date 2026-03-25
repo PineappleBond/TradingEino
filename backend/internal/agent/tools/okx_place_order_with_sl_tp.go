@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/PineappleBond/TradingEino/backend/internal/logger"
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
 	"github.com/PineappleBond/TradingEino/backend/internal/utils/xmd"
 	"github.com/PineappleBond/TradingEino/backend/pkg/okex"
@@ -98,7 +99,8 @@ func (c *OkxPlaceOrderWithSlTpTool) Info(ctx context.Context) (*schema.ToolInfo,
 func (c *OkxPlaceOrderWithSlTpTool) InvokableRun(ctx context.Context, argsJSON string, opts ...tool.Option) (string, error) {
 	// 1. Wait for rate limiter
 	if err := c.limiter.Wait(ctx); err != nil {
-		return "", fmt.Errorf("rate limiter wait failed: %w", err)
+		logger.Errorf(ctx, "okx-place-order-with-sl-tp: rate limiter wait failed", err)
+		return fmt.Sprintf("**订单执行失败**\n\n**错误类型：** 限流等待失败\n**错误信息：** %v", err), nil
 	}
 
 	// 2. Parse JSON arguments
@@ -115,6 +117,7 @@ func (c *OkxPlaceOrderWithSlTpTool) InvokableRun(ctx context.Context, argsJSON s
 		TpOrderPx   string `json:"tpOrderPx"`
 	}
 	if err := json.Unmarshal([]byte(argsJSON), &params); err != nil {
+		logger.Errorf(ctx, "okx-place-order-with-sl-tp: failed to parse arguments", err)
 		return "", fmt.Errorf("failed to unmarshal args: %w", err)
 	}
 
@@ -210,27 +213,27 @@ func (c *OkxPlaceOrderWithSlTpTool) InvokableRun(ctx context.Context, argsJSON s
 	}
 
 	if err != nil {
-		// Log the error and return formatted error message to Agent (not error)
-		// This allows Agent to see the failure and decide whether to retry
+		logger.Errorf(ctx, "okx-place-order-with-sl-tp: API call failed", err, "instID", params.InstID, "side", params.Side, "size", params.Size)
 		return fmt.Sprintf("**订单执行失败**\n\n**错误类型：** API 调用失败\n**错误信息：** %v\n**交易对：** %s\n**方向：** %s\n**数量：** %s",
 			err, params.InstID, params.Side, params.Size), nil
 	}
 
 	// 8. Validate OKX response code
 	if result.Code.Int() != 0 {
-		// Return formatted error message to Agent (not error)
+		logger.Errorf(ctx, "okx-place-order-with-sl-tp: response code error", nil, "instID", params.InstID, "side", params.Side, "size", params.Size, "code", result.Code.Int(), "msg", result.Msg)
 		return fmt.Sprintf("**订单执行失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** PlaceAlgoOrder\n**交易对：** %s\n**方向：** %s\n**数量：** %s",
 			result.Code.Int(), result.Msg, params.InstID, params.Side, params.Size), nil
 	}
 
 	// 9. Validate algo order sCode/sMsg (EXEC-06)
 	if len(result.PlaceAlgoOrders) == 0 {
+		logger.Errorf(ctx, "okx-place-order-with-sl-tp: empty response", nil, "instID", params.InstID)
 		return "", fmt.Errorf("no algo order result returned")
 	}
 
 	algoResult := result.PlaceAlgoOrders[0]
 	if algoResult.SCode != 0 {
-		// Return formatted error message to Agent (not error)
+		logger.Errorf(ctx, "okx-place-order-with-sl-tp: order-level sCode error", nil, "instID", params.InstID, "side", params.Side, "size", params.Size, "sCode", algoResult.SCode, "sMsg", algoResult.SMsg)
 		return fmt.Sprintf("**订单执行失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**交易对：** %s\n**方向：** %s\n**数量：** %s",
 			int64(algoResult.SCode), algoResult.SMsg, params.InstID, params.Side, params.Size), nil
 	}

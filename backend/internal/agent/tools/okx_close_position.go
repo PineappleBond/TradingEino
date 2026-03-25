@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/PineappleBond/TradingEino/backend/internal/logger"
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
 	"github.com/PineappleBond/TradingEino/backend/pkg/okex"
 	accountRequests "github.com/PineappleBond/TradingEino/backend/pkg/okex/requests/rest/account"
@@ -80,7 +81,8 @@ func (c *OkxClosePositionTool) InvokableRun(ctx context.Context, argumentsInJSON
 
 	// Wait for rate limiter before making API call
 	if err := c.limiter.Wait(ctx); err != nil {
-		return "", fmt.Errorf("rate limiter wait failed: %w", err)
+		logger.Errorf(ctx, "okx-close-position: rate limiter wait failed", err, "instID", req.InstID)
+		return fmt.Sprintf("**平仓失败**\n\n**错误类型：** 限流等待失败\n**错误信息：** %v\n**交易对：** %s", err, req.InstID), nil
 	}
 
 	// For 100% close, use ClosePosition endpoint directly
@@ -107,16 +109,19 @@ func (c *OkxClosePositionTool) closeFullPosition(ctx context.Context, instID, po
 	// Call ClosePosition API
 	resp, err := c.svcCtx.OKXClient.Rest.Trade.ClosePosition(closeReq)
 	if err != nil {
+		logger.Errorf(ctx, "okx-close-position: API call failed", err, "instID", instID)
 		return fmt.Sprintf("**平仓失败**\n\n**错误类型：** API 调用失败\n**错误信息：** %v\n**交易对：** %s", err, instID), nil
 	}
 
 	// Check response code (EXEC-06: sCode/sMsg validation)
 	if resp.Code.Int() != 0 {
+		logger.Errorf(ctx, "okx-close-position: response code error", nil, "instID", instID, "code", resp.Code.Int(), "msg", resp.Msg)
 		return fmt.Sprintf("**平仓失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** ClosePosition\n**交易对：** %s", resp.Code.Int(), resp.Msg, instID), nil
 	}
 
 	// Check for empty response
 	if len(resp.ClosePositions) == 0 {
+		logger.Errorf(ctx, "okx-close-position: empty response", nil, "instID", instID)
 		return fmt.Sprintf("**平仓失败**\n\n**错误类型：** 仓位不存在或已平仓\n**交易对：** %s", instID), nil
 	}
 
@@ -137,16 +142,19 @@ func (c *OkxClosePositionTool) closePartialPosition(ctx context.Context, instID,
 
 	// Wait for rate limiter for Account endpoint
 	if err := c.limiter.Wait(ctx); err != nil {
+		logger.Errorf(ctx, "okx-close-position: rate limiter wait failed (GetPositions)", err, "instID", instID)
 		return fmt.Sprintf("**平仓失败**\n\n**错误类型：** 限流等待失败\n**错误信息：** %v", err), nil
 	}
 
 	posResp, err := c.svcCtx.OKXClient.Rest.Account.GetPositions(posReq)
 	if err != nil {
+		logger.Errorf(ctx, "okx-close-position: API call failed (GetPositions)", err, "instID", instID)
 		return fmt.Sprintf("**平仓失败**\n\n**错误类型：** API 调用失败（查询仓位）\n**错误信息：** %v", err), nil
 	}
 
 	// Check response code
 	if posResp.Code.Int() != 0 {
+		logger.Errorf(ctx, "okx-close-position: response code error (GetPositions)", nil, "instID", instID, "code", posResp.Code.Int(), "msg", posResp.Msg)
 		return fmt.Sprintf("**平仓失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** GetPositions", posResp.Code.Int(), posResp.Msg), nil
 	}
 
@@ -189,21 +197,25 @@ func (c *OkxClosePositionTool) closePartialPosition(ctx context.Context, instID,
 
 	// Wait for rate limiter for Trade endpoint
 	if err := c.limiter.Wait(ctx); err != nil {
-		return "", fmt.Errorf("rate limiter wait failed: %w", err)
+		logger.Errorf(ctx, "okx-close-position: rate limiter wait failed (PlaceOrder)", err, "instID", instID)
+		return fmt.Sprintf("**平仓失败**\n\n**错误类型：** 限流等待失败\n**错误信息：** %v\n**交易对：** %s", err, instID), nil
 	}
 
 	orderResp, err := c.svcCtx.OKXClient.Rest.Trade.PlaceOrder([]tradeRequests.PlaceOrder{placeOrderReq})
 	if err != nil {
+		logger.Errorf(ctx, "okx-close-position: API call failed (PlaceOrder)", err, "instID", instID)
 		return fmt.Sprintf("**平仓失败**\n\n**错误类型：** API 调用失败（下单）\n**错误信息：** %v", err), nil
 	}
 
 	// Check response code
 	if orderResp.Code.Int() != 0 {
+		logger.Errorf(ctx, "okx-close-position: response code error (PlaceOrder)", nil, "instID", instID, "code", orderResp.Code.Int(), "msg", orderResp.Msg)
 		return fmt.Sprintf("**平仓失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** PlaceOrder", orderResp.Code.Int(), orderResp.Msg), nil
 	}
 
 	// Check for empty response
 	if len(orderResp.PlaceOrders) == 0 {
+		logger.Errorf(ctx, "okx-close-position: empty response (PlaceOrder)", nil, "instID", instID)
 		return "**平仓失败**\n\n**错误类型：** 空响应", nil
 	}
 
@@ -211,6 +223,7 @@ func (c *OkxClosePositionTool) closePartialPosition(ctx context.Context, instID,
 
 	// Check order-level sCode
 	if int64(orderResult.SCode) != 0 {
+		logger.Errorf(ctx, "okx-close-position: order-level sCode error", nil, "instID", instID, "sCode", orderResult.SCode, "sMsg", orderResult.SMsg)
 		return fmt.Sprintf("**平仓失败**\n\n**错误代码：** %d\n**错误信息：** %s\n**接口：** PlaceOrder", int64(orderResult.SCode), orderResult.SMsg), nil
 	}
 
