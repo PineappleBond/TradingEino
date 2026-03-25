@@ -1,0 +1,513 @@
+/* 赛博朋克全局样式 */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a25;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #454555;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #bf00ff;
+}
+
+/*  selections */
+::selection {
+  background-color: rgba(191, 0, 255, 0.3);
+  color: #ffffff;
+}
+
+/* 霓虹发光效果工具类 */
+.cyber-glow {
+  box-shadow: 0 0 10px rgba(191, 0, 255, 0.5);
+}
+
+.cyber-glow-strong {
+  box-shadow: 0 0 20px rgba(191, 0, 255, 0.8);
+}
+
+.cyber-glow-cyan {
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+/* 渐变文字 */
+.cyber-gradient-text {
+  background: linear-gradient(135deg, #bf00ff 0%, #00ffff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 边框发光 */
+.cyber-border {
+  border: 1px solid rgba(191, 0, 255, 0.3);
+  box-shadow: inset 0 0 10px rgba(191, 0, 255, 0.1);
+}
+
+/* 动画 - 脉冲发光 */
+@keyframes cyber-pulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(191, 0, 255, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(191, 0, 255, 0.8);
+  }
+}
+
+.cyber-animate-pulse {
+  animation: cyber-pulse 2s ease-in-out infinite;
+}
+
+/* 动画 - 扫描线效果 */
+@keyframes cyber-scan {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+.cyber-scan-line {
+  position: relative;
+  overflow: hidden;
+}
+
+.cyber-scan-line::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.5), transparent);
+  animation: cyber-scan 3s linear infinite;
+}
+
+/* 链接样式 */
+a {
+  color: #00ffff;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: #bf00ff;
+}
+
+/* 输入框文字颜色覆盖 */
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-input-affix-wrapper > input,
+.ant-input-number,
+.ant-input-number > input,
+.ant-input-textarea {
+  color: #ffffff !important;
+}
+
+.ant-input::placeholder,
+.ant-input-affix-wrapper::placeholder,
+.ant-input-number::placeholder,
+.ant-input-textarea::placeholder {
+  color: #808080 !important;
+}
+
+/* Select 文字颜色覆盖 */
+.ant-select,
+.ant-select-selector,
+.ant-select-selection-item,
+.ant-select-selection-placeholder,
+.ant-select-selection-search-input {
+  color: #ffffff !important;
+}
+
+/* Select 下拉选项 */
+.ant-select-item,
+.ant-select-item-option-content {
+  color: #ffffff !important;
+}
+
+/* DatePicker 文字颜色覆盖 */
+.ant-picker,
+.ant-picker-input > input,
+.ant-picker-input > input::placeholder {
+  color: #ffffff !important;
+}
+
+/* TimePicker 文字颜色覆盖 */
+.ant-time-picker,
+.ant-time-picker-input,
+.ant-time-picker-input > input {
+  color: #ffffff !important;
+}
+
+/* Cascader/TreeSelect 文字颜色 */
+.ant-cascader-input,
+.ant-tree-select-selector {
+  color: #ffffff !important;
+}
+
+/* Radio 和 Checkbox 文字颜色 */
+.ant-radio-wrapper,
+.ant-checkbox-wrapper {
+  color: #ffffff !important;
+}
+
+/* Form 标签颜色 */
+.ant-form-item-label > label,
+.ant-form-item-label label {
+  color: #c0c0c0 !important;
+}
+
+/* Form 额外说明文字 */
+.ant-form-item-extra {
+  color: #808080 !important;
+}
+
+/* Form 输入框中的文字 */
+.ant-form-item .ant-input,
+.ant-form-item .ant-input-affix-wrapper,
+.ant-form-item .ant-input-affix-wrapper > input,
+.ant-form-item .ant-select,
+.ant-form-item .ant-select-selector,
+.ant-form-item .ant-select-selection-item,
+.ant-form-item .ant-picker,
+.ant-form-item .ant-picker-input > input {
+  color: #ffffff !important;
+}
+
+/* Table 文字颜色 */
+.ant-table,
+.ant-table-cell,
+.ant-table-tbody > tr > td,
+.ant-table-thead > tr > th {
+  color: #ffffff !important;
+}
+
+/* 赛博朋克卡片样式 */
+.cyber-card .ant-card-head {
+  background: rgba(191, 0, 255, 0.05);
+  border-bottom: 1px solid rgba(191, 0, 255, 0.2);
+}
+
+.cyber-card .ant-card-head-title {
+  color: #bf00ff;
+  font-weight: 600;
+}
+
+.cyber-card {
+  border: 1px solid rgba(191, 0, 255, 0.1);
+  box-shadow: 0 0 20px rgba(191, 0, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.cyber-card:hover {
+  box-shadow: 0 0 30px rgba(191, 0, 255, 0.15);
+  border-color: rgba(191, 0, 255, 0.3);
+}
+
+/* Discord 风格聊天记录样式 */
+.chat-wrapper {
+  display: flex;
+  gap: 12px;
+  height: 100%;
+  min-height: 400px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  flex: 1;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 消息整体包裹（头像 + 气泡） */
+.chat-message-wrapper {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 90px;
+  align-items: flex-start;
+  max-width: 92%;
+}
+
+/* 聊天气泡 */
+.chat-message {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  min-height: 50px;
+  /* 气泡样式 - 统一背景 */
+  background: rgba(191, 0, 255, 0.08);
+  border: 1px solid rgba(191, 0, 255, 0.15);
+  /* 左侧圆角更明显，模拟气泡尾巴 */
+  border-bottom-left-radius: 4px;
+  position: relative;
+}
+
+.chat-message:hover {
+  background: rgba(191, 0, 255, 0.12);
+  border-color: rgba(191, 0, 255, 0.3);
+  box-shadow: 0 0 15px rgba(191, 0, 255, 0.15);
+}
+
+/* 头像样式 */
+.chat-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  color: #ffffff;
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.chat-message-content-wrapper {
+  min-width: 0;
+}
+
+.chat-message-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chat-message-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chat-message-from {
+  color: #00ffff;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.chat-time-btn {
+  color: #888;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.chat-time-btn:hover {
+  color: #00ffff;
+  background: rgba(0, 255, 255, 0.1);
+}
+
+.chat-message-content {
+  color: #e0e0e0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* 消息操作按钮 */
+.chat-message-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.chat-message:hover .chat-message-actions {
+  opacity: 1;
+}
+
+.chat-action-btn {
+  background: rgba(191, 0, 255, 0.2);
+  border: 1px solid rgba(191, 0, 255, 0.4);
+  color: #e0e0e0;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.chat-action-btn:hover {
+  background: rgba(191, 0, 255, 0.3);
+  border-color: rgba(191, 0, 255, 0.6);
+  color: #ffffff;
+  box-shadow: 0 0 6px rgba(191, 0, 255, 0.3);
+}
+
+.chat-message-content p {
+  margin: 0;
+}
+
+.chat-message-content pre {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 8px 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chat-message-content code {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 13px;
+}
+
+.chat-message-content pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.chat-message-content ul,
+.chat-message-content ol {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+
+.chat-message-content blockquote {
+  border-left: 3px solid rgba(191, 0, 255, 0.5);
+  padding-left: 12px;
+  margin: 8px 0;
+  color: #aaa;
+}
+
+.chat-message-content h1,
+.chat-message-content h2,
+.chat-message-content h3,
+.chat-message-content h4,
+.chat-message-content h5,
+.chat-message-content h6 {
+  color: #bf00ff;
+  margin: 12px 0 8px;
+  font-weight: 600;
+}
+
+.chat-message-content h1 { font-size: 20px; }
+.chat-message-content h2 { font-size: 18px; }
+.chat-message-content h3 { font-size: 16px; }
+.chat-message-content h4 { font-size: 14px; }
+
+.chat-message-content table {
+  border-collapse: collapse;
+  margin: 8px 0;
+}
+
+.chat-message-content th,
+.chat-message-content td {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 8px 12px;
+}
+
+.chat-message-content th {
+  background: rgba(191, 0, 255, 0.2);
+  color: #bf00ff;
+}
+
+.chat-message-content tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* 时间线样式 - 贴边设计 */
+.chat-timeline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  flex-shrink: 0;
+  border-left: 1px solid rgba(191, 0, 255, 0.2);
+  padding-left: 12px;
+  overflow-y: auto;
+  width: 100px;
+  flex-basis: 100px;
+}
+
+.chat-timeline-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 70px;
+}
+
+.chat-timeline-item:hover {
+  transform: translateX(2px);
+}
+
+.chat-timeline-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 11px;
+  color: #ffffff;
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  z-index: 1;
+}
+
+.chat-timeline-item:hover .chat-timeline-avatar {
+  border-color: #00ffff;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+.chat-timeline-line {
+  width: 2px;
+  height: 40px;
+  background: linear-gradient(to bottom, rgba(191, 0, 255, 0.3), rgba(191, 0, 255, 0.1));
+  margin-top: 2px;
+}
+
+.chat-timeline-item:last-child .chat-timeline-line {
+  display: none;
+}

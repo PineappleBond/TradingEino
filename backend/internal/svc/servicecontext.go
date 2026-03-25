@@ -1,0 +1,42 @@
+package svc
+
+import (
+	"github.com/PineappleBond/TradingEino/backend/internal/config"
+	"github.com/PineappleBond/TradingEino/backend/internal/logger"
+	"github.com/PineappleBond/TradingEino/backend/pkg/okex/api"
+	"github.com/cloudwego/eino-ext/components/model/openai"
+	"gorm.io/gorm"
+)
+
+type ServiceContext struct {
+	Config     config.Config
+	Logger4Gin *logger.Logger
+	DB         *gorm.DB
+	ChatModel  *openai.ChatModel
+	OKXClient  *api.Client
+}
+
+func NewServiceContext(cfg config.Config) *ServiceContext {
+	gormLog := logger.New(config.LoggerConfig{
+		Level:     cfg.Logger.Level,
+		Output:    cfg.Logger.Output,
+		FilePath:  cfg.Logger.DBLogPath(),
+		AddSource: cfg.Logger.AddSource,
+	}, 5)
+
+	log4Gin := logger.New(config.LoggerConfig{
+		Level:     cfg.Logger.Level,
+		Output:    cfg.Logger.Output,
+		FilePath:  cfg.Logger.GinLogPath(),
+		AddSource: cfg.Logger.AddSource,
+	}, 5)
+
+	s := &ServiceContext{
+		Logger4Gin: log4Gin,
+		DB:         mustInitDB(cfg, gormLog),
+		Config:     cfg,
+		ChatModel:  mustInitChatModel(cfg),
+		OKXClient:  mustInitOKXClient(cfg),
+	}
+	return s
+}
