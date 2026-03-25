@@ -87,20 +87,22 @@ func InitAgents(ctx context.Context, svcCtx *svc.ServiceContext) error {
 			return
 		}
 
-		// Initialize OKXWatcher agent (DeepAgent orchestrator) with all 4 SubAgents
-		okxWatcherAgent, err := okx_watcher.NewOkxWatcherAgent(ctx, svcCtx,
-			technoAgent.Agent(),
-			flowAnalyzer.Agent(),
-			positionManager.Agent(),
-			sentimentAnalystAgent.Agent())
+		// Initialize Executor agent (ChatModelAgent for trade execution)
+		executorAgent, err := executor_agent.NewExecutorAgent(ctx, svcCtx)
 		if err != nil {
 			initErr = err
 			cancel()
 			return
 		}
 
-		// Initialize Executor agent (ChatModelAgent for trade execution)
-		executorAgent, err := executor_agent.NewExecutorAgent(ctx, svcCtx)
+		// Initialize OKXWatcher agent (DeepAgent orchestrator) with all 5 SubAgents
+		// ExecutorAgent is included to enable trade execution coordination
+		okxWatcherAgent, err := okx_watcher.NewOkxWatcherAgent(ctx, svcCtx,
+			technoAgent.Agent(),
+			flowAnalyzer.Agent(),
+			positionManager.Agent(),
+			sentimentAnalystAgent.Agent(),
+			executorAgent.Agent())
 		if err != nil {
 			initErr = err
 			cancel()
