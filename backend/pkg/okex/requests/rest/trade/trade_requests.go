@@ -67,15 +67,16 @@ type (
 		InstType okex.InstrumentType `json:"instType,omitempty"`
 	}
 	PlaceAlgoOrder struct {
-		InstID     string             `json:"instId"`
-		TdMode     okex.TradeMode     `json:"tdMode"`
-		Ccy        string             `json:"ccy,omitempty"`
-		Side       okex.OrderSide     `json:"side"`
-		PosSide    okex.PositionSide  `json:"posSide,omitempty"`
-		OrdType    okex.AlgoOrderType `json:"ordType"`
-		Sz         string             `json:"sz"`
-		ReduceOnly bool               `json:"reduceOnly,omitempty"`
-		TgtCcy     okex.QuantityType  `json:"tgtCcy,omitempty"`
+		InstID      string             `json:"instId"`
+		TdMode      okex.TradeMode     `json:"tdMode"`
+		Ccy         string             `json:"ccy,omitempty"`
+		Side        okex.OrderSide     `json:"side"`
+		PosSide     okex.PositionSide  `json:"posSide,omitempty"`
+		OrdType     okex.OrderType     `json:"ordType"`
+		AlgoOrdType okex.AlgoOrderType `json:"algoOrdType"`
+		Sz          string             `json:"sz"`
+		ReduceOnly  bool               `json:"reduceOnly,omitempty"`
+		TgtCcy      okex.QuantityType  `json:"tgtCcy,omitempty"`
 		StopOrder
 		TriggerOrder
 		IcebergOrder

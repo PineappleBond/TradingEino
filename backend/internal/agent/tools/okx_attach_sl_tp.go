@@ -22,11 +22,11 @@ import (
 type OkxAttachSlTpTool struct {
 	svcCtx    *svc.ServiceContext
 	limiter   *rate.Limiter
-	mockTrade mockTrade // for testing only
+	mockTrade mockTradeAttach // for testing only
 }
 
-// mockTrade interface for testing
-type mockTrade interface {
+// mockTradeAttach interface for testing
+type mockTradeAttach interface {
 	PlaceAlgoOrder(req traderequests.PlaceAlgoOrder) (traderesponses.PlaceAlgoOrder, error)
 }
 
@@ -189,14 +189,21 @@ func (c *OkxAttachSlTpTool) InvokableRun(ctx context.Context, argsJSON string, o
 
 	// Place SL order if provided
 	if slTriggerPx > 0 {
+		// Determine ordType: "limit" if has order price, otherwise "market"
+		slOrdType := okex.OrderMarket
+		if hasSlOrderPx {
+			slOrdType = okex.OrderLimit
+		}
+
 		slReq := traderequests.PlaceAlgoOrder{
-			InstID:     params.InstID,
-			TdMode:     okex.TradeCrossMode,
-			Side:       side,
-			PosSide:    okex.PositionSide(params.PosSide),
-			OrdType:    okex.AlgoOrderConditional,
-			Sz:         params.Sz,
-			ReduceOnly: true, // Must be true for closing position
+			InstID:      params.InstID,
+			TdMode:      okex.TradeCrossMode,
+			Side:        side,
+			PosSide:     okex.PositionSide(params.PosSide),
+			OrdType:     slOrdType,
+			AlgoOrdType: okex.AlgoOrderConditional,
+			Sz:          params.Sz,
+			ReduceOnly:  true, // Must be true for closing position
 			StopOrder: traderequests.StopOrder{
 				SlTriggerPx: floatPtr(slTriggerPx),
 				TpTriggerPx: nil, // No TP in SL order
@@ -243,14 +250,21 @@ func (c *OkxAttachSlTpTool) InvokableRun(ctx context.Context, argsJSON string, o
 
 	// Place TP order if provided
 	if tpTriggerPx > 0 {
+		// Determine ordType: "limit" if has order price, otherwise "market"
+		tpOrdType := okex.OrderMarket
+		if hasTpOrderPx {
+			tpOrdType = okex.OrderLimit
+		}
+
 		tpReq := traderequests.PlaceAlgoOrder{
-			InstID:     params.InstID,
-			TdMode:     okex.TradeCrossMode,
-			Side:       side,
-			PosSide:    okex.PositionSide(params.PosSide),
-			OrdType:    okex.AlgoOrderConditional,
-			Sz:         params.Sz,
-			ReduceOnly: true, // Must be true for closing position
+			InstID:      params.InstID,
+			TdMode:      okex.TradeCrossMode,
+			Side:        side,
+			PosSide:     okex.PositionSide(params.PosSide),
+			OrdType:     tpOrdType,
+			AlgoOrdType: okex.AlgoOrderConditional,
+			Sz:          params.Sz,
+			ReduceOnly:  true, // Must be true for closing position
 			StopOrder: traderequests.StopOrder{
 				SlTriggerPx: nil, // No SL in TP order
 				SlOrdPx:     nil,

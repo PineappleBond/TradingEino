@@ -46,8 +46,8 @@ func TestOkxAttachSlTpTool_AttachSlTpReturnsAlgoId(t *testing.T) {
 			if req.InstID != "ETH-USDT-SWAP" {
 				t.Errorf("Expected instId 'ETH-USDT-SWAP', got '%s'", req.InstID)
 			}
-			if req.OrdType != okex.AlgoOrderConditional {
-				t.Errorf("Expected ordType 'conditional', got '%s'", req.OrdType)
+			if req.AlgoOrdType != okex.AlgoOrderConditional {
+				t.Errorf("Expected algoOrdType 'conditional', got '%s'", req.AlgoOrdType)
 			}
 
 			callCount++

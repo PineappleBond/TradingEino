@@ -22,7 +22,12 @@ import (
 type OkxPlaceOrderWithSlTpTool struct {
 	svcCtx    *svc.ServiceContext
 	limiter   *rate.Limiter
-	mockTrade mockTrade // for testing only
+	mockTrade mockTradePlace // for testing only
+}
+
+// mockTradePlace interface for testing
+type mockTradePlace interface {
+	PlaceAlgoOrder(req traderequests.PlaceAlgoOrder) (traderesponses.PlaceAlgoOrder, error)
 }
 
 // NewOkxPlaceOrderWithSlTpTool creates a new OkxPlaceOrderWithSlTpTool instance
@@ -119,10 +124,12 @@ func (c *OkxPlaceOrderWithSlTpTool) InvokableRun(ctx context.Context, argsJSON s
 	// 3. Validate at least one of slTriggerPx or tpTriggerPx is provided
 	slTriggerPx := 0.0
 	tpTriggerPx := 0.0
-	slOrderPx := 0.0
-	tpOrderPx := 0.0
 	hasSlOrderPx := false
 	hasTpOrderPx := false
+	slOrderPx := 0.0
+	tpOrderPx := 0.0
+	slOrderPxStr := ""
+	tpOrderPxStr := ""
 
 	if params.SlTriggerPx != "" {
 		if _, err := fmt.Sscanf(params.SlTriggerPx, "%f", &slTriggerPx); err != nil {
@@ -130,14 +137,16 @@ func (c *OkxPlaceOrderWithSlTpTool) InvokableRun(ctx context.Context, argsJSON s
 		}
 	}
 	if params.SlOrderPx != "" {
-		// -1 means market order for OKX, should be nil (not sent)
+		// -1 means market order for OKX, should be empty string
 		if params.SlOrderPx == "-1" {
-			hasSlOrderPx = false // nil means market order
+			hasSlOrderPx = true      // 需要发送字段
+			slOrderPxStr = ""        // 空字符串表示市价单
 		} else {
 			hasSlOrderPx = true
 			if _, err := fmt.Sscanf(params.SlOrderPx, "%f", &slOrderPx); err != nil {
 				return "", fmt.Errorf("invalid slOrderPx format: %w", err)
 			}
+			slOrderPxStr = params.SlOrderPx
 		}
 	}
 	if params.TpTriggerPx != "" {
@@ -146,14 +155,16 @@ func (c *OkxPlaceOrderWithSlTpTool) InvokableRun(ctx context.Context, argsJSON s
 		}
 	}
 	if params.TpOrderPx != "" {
-		// -1 means market order for OKX, should be nil (not sent)
+		// -1 means market order for OKX, should be empty string
 		if params.TpOrderPx == "-1" {
-			hasTpOrderPx = false // nil means market order
+			hasTpOrderPx = true      // 需要发送字段
+			tpOrderPxStr = ""        // 空字符串表示市价单
 		} else {
 			hasTpOrderPx = true
 			if _, err := fmt.Sscanf(params.TpOrderPx, "%f", &tpOrderPx); err != nil {
 				return "", fmt.Errorf("invalid tpOrderPx format: %w", err)
 			}
+			tpOrderPxStr = params.TpOrderPx
 		}
 	}
 
@@ -185,16 +196,37 @@ func (c *OkxPlaceOrderWithSlTpTool) InvokableRun(ctx context.Context, argsJSON s
 		return "", fmt.Errorf("invalid posSide: %s", params.PosSide)
 	}
 
-	// 6. Build PlaceAlgoOrder request with conditional order type
-	// Use params.Size directly as string to preserve decimal precision
+	// 6. Determine algoOrdType and ordType
+	// - algoOrdType: "conditional" (only SL or TP) or "oco" (both SL and TP)
+	// - ordType: "limit" if has order price, otherwise "market"
+	var algoOrdType okex.AlgoOrderType
+	var ordType okex.OrderType
+
+	hasBoth := slTriggerPx > 0 && tpTriggerPx > 0
+	if hasBoth {
+		algoOrdType = okex.AlgoOrderOCO
+	} else {
+		algoOrdType = okex.AlgoOrderConditional
+	}
+
+	// Determine ordType based on whether we have limit prices
+	hasLimitPrice := slOrderPxStr != "" || tpOrderPxStr != ""
+	if hasLimitPrice {
+		ordType = okex.OrderLimit
+	} else {
+		ordType = okex.OrderMarket
+	}
+
+	// 7. Build PlaceAlgoOrder request
 	req := traderequests.PlaceAlgoOrder{
-		InstID:    params.InstID,
-		TdMode:    okex.TradeCrossMode,
-		Side:      side,
-		PosSide:   posSide,
-		OrdType:   okex.AlgoOrderConditional,
-		Sz:        params.Size,
-		StopOrder: traderequests.StopOrder{},
+		InstID:      params.InstID,
+		TdMode:      okex.TradeCrossMode,
+		Side:        side,
+		PosSide:     posSide,
+		OrdType:     ordType,
+		AlgoOrdType: algoOrdType,
+		Sz:          params.Size,
+		StopOrder:   traderequests.StopOrder{},
 	}
 
 	// Only set trigger prices if provided (non-zero)
@@ -205,12 +237,21 @@ func (c *OkxPlaceOrderWithSlTpTool) InvokableRun(ctx context.Context, argsJSON s
 		req.TpTriggerPx = &tpTriggerPx
 	}
 
-	// Only set order prices if explicitly provided
+	// Set order prices - use pointer to value, empty string means market order
 	if hasSlOrderPx {
-		req.SlOrdPx = &slOrderPx
+		if slOrderPxStr == "" {
+			// Market order: set to 0 but the JSON tag will handle it
+			req.SlOrdPx = nil // Will be omitted, OKX treats missing as market
+		} else {
+			req.SlOrdPx = &slOrderPx
+		}
 	}
 	if hasTpOrderPx {
-		req.TpOrdPx = &tpOrderPx
+		if tpOrderPxStr == "" {
+			req.TpOrdPx = nil
+		} else {
+			req.TpOrdPx = &tpOrderPx
+		}
 	}
 
 	// 7. Call PlaceAlgoOrder API

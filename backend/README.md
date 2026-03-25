@@ -3,6 +3,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Go Version](https://img.shields.io/badge/Go-1.26.1-blue)](https://go.dev)
 [![Eino](https://img.shields.io/badge/Eino-v0.8.4-purple)](https://github.com/cloudwego/eino)
+[![Version](https://img.shields.io/badge/Version-v1.0.0-green.svg)](https://github.com/PineappleBond/TradingEino/releases)
 
 [中文版本](./README-ZH.md)
 
@@ -11,6 +12,8 @@
 ## Overview
 
 TradingEino is an AI-powered multi-agent cryptocurrency trading system built on the Cloudwego Eino framework. It monitors OKX exchange markets, performs technical and sentiment analysis, and executes trades autonomously with built-in risk management.
+
+**v1.0.0 Released!** 🎉
 
 ## Core Features
 
@@ -37,6 +40,12 @@ TradingEino is an AI-powered multi-agent cryptocurrency trading system built on 
 │Techno │ │Sentiment│ │   PositionManager   │ │  Executor  │
 │       │ │Analyst  │ │                     │ │  (Level 1) │
 └───────┘ └─────────┘ └─────────────────────┘ └────────────┘
+```
+
+### Complete Workflow
+
+```
+Scheduled Task → OKXWatcher Coordination → Multi-Agent Analysis → OKXWatcher Summary → ExecutorAgent Execution → Perfect Loop
 ```
 
 ### Agent Responsibilities
@@ -156,9 +165,20 @@ The web interface will be available at `http://localhost:10098`
 | Phase       | Goal                                                                              | Status         |
 |-------------|-----------------------------------------------------------------------------------|----------------|
 | **Phase 1** | Foundation & Safety (error handling, rate limiting, singleton, graceful shutdown) | ✅ Complete     |
-| **Phase 2** | Analysis Layer (refactor sub-agents to ChatModelAgent)                            | 🔄 In Progress |
-| **Phase 3** | Execution Automation (trading tools, Executor Agent Level 1)                      | ⏳ Planned      |
+| **Phase 2** | Analysis Layer (refactor sub-agents to ChatModelAgent)                            | ✅ Complete     |
+| **Phase 3** | Execution Automation (trading tools, Executor Agent Level 1)                      | ✅ Complete     |
 | **Phase 4** | RAG Memory (Redis Stack, decision save/search)                                    | ⏳ Planned      |
+
+### v1.0.0 Completed Features
+
+- ✅ Scheduled Task System (Cron)
+- ✅ OKXWatcher Multi-Agent Coordination
+- ✅ Technical Analysis Agent (20+ indicators)
+- ✅ Sentiment Analysis Agent (Funding Rate)
+- ✅ Position Management Agent
+- ✅ Executor Agent (Level 1)
+- ✅ Stop-Loss/Take-Profit Order Support
+- ✅ Web Admin Interface
 
 ## Key Decisions (ADR)
 
@@ -169,7 +189,7 @@ The web interface will be available at `http://localhost:10098`
 | Tool atomic design              | Each tool does one thing well                              | ✅ Approved |
 | RAG with Redis Stack + m3e-base | Local embedding, no external API dependency                | ✅ Approved |
 | Independent RiskMonitor layer   | Real-time monitoring, can override decisions               | ✅ Approved |
-| Executor starts at Level 1      | Only execute explicit commands, earn autonomy over time    | ⏳ Pending  |
+| Executor starts at Level 1      | Only execute explicit commands, earn autonomy over time    | ✅ Approved |
 
 ## Safety Features
 
@@ -199,6 +219,8 @@ The web interface will be available at `http://localhost:10098`
 | `okx-cancel-order`     | Cancel pending order         | 5 req/s    |
 | `okx-get-order`        | Query order status           | 10 req/s   |
 | `okx-close-position`   | Close position               | 5 req/s    |
+| `okx-place-order-with-sl-tp` | Place order with SL/TP | 5 req/s    |
+| `okx-attach-sl-tp`     | Attach SL/TP to existing order | 5 req/s  |
 
 ## License
 

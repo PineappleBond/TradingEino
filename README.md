@@ -3,6 +3,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Go Version](https://img.shields.io/badge/Go-1.26.1-blue)](https://go.dev)
 [![Eino](https://img.shields.io/badge/Eino-v0.8.4-purple)](https://github.com/cloudwego/eino)
+[![Version](https://img.shields.io/badge/Version-v1.0.0-green.svg)](https://github.com/PineappleBond/TradingEino/releases)
 
 [中文版本](./README-ZH.md)
 
@@ -148,9 +149,18 @@ The web interface will be available at `http://localhost:10098`
 | Phase       | Goal                                                                              | Status         |
 |-------------|-----------------------------------------------------------------------------------|----------------|
 | **Phase 1** | Foundation & Safety (error handling, rate limiting, singleton, graceful shutdown) | ✅ Complete     |
-| **Phase 2** | Analysis Layer (refactor sub-agents to ChatModelAgent)                            | 🔄 In Progress |
-| **Phase 3** | Execution Automation (trading tools, Executor Agent Level 1)                      | ⏳ Planned      |
+| **Phase 2** | Analysis Layer (refactor sub-agents to ChatModelAgent)                            | ✅ Complete     |
+| **Phase 3** | Execution Automation (trading tools, Executor Agent Level 1)                      | ✅ Complete     |
 | **Phase 4** | RAG Memory (Redis Stack, decision save/search)                                    | ⏳ Planned      |
+
+## v1.0.0 Completed Features
+
+✅ **Full Trading Loop Implemented**:
+- Scheduled Task Trigger → OKXWatcher → Multi-Agent Analysis → OKXWatcher Summary → ExecutorAgent Execution
+- Technical Analysis Agent (TechnoAgent) - 20+ indicators
+- Sentiment Analysis Agent (SentimentAnalyst) - Funding rate analysis
+- Position Management Agent (PositionManager) - Risk assessment
+- Execution Agent (ExecutorAgent) - Level 1 autonomous trading
 
 ## Key Decisions (ADR)
 
@@ -161,7 +171,7 @@ The web interface will be available at `http://localhost:10098`
 | Tool atomic design              | Each tool does one thing well                              | ✅ Approved |
 | RAG with Redis Stack + m3e-base | Local embedding, no external API dependency                | ✅ Approved |
 | Independent RiskMonitor layer   | Real-time monitoring, can override decisions               | ✅ Approved |
-| Executor starts at Level 1      | Only execute explicit commands, earn autonomy over time    | ⏳ Pending  |
+| Executor starts at Level 1      | Only execute explicit commands, earn autonomy over time    | ✅ Complete |
 
 ## Safety Features
 
@@ -208,4 +218,13 @@ TradingEino is released under the [Apache License 2.0](LICENSE).
 
 ## Disclaimer
 
-This software is for educational purposes. Cryptocurrency trading involves substantial risk of loss. The developers are not responsible for any financial losses resulting from the use of this software. Always test thoroughly in sandbox mode before live trading.
+> ⚠️ **IMPORTANT NOTICE**
+>
+> - **This project is for educational and learning purposes only**, designed to demonstrate how to build a trading system using AI multi-agent architecture
+> - **No comprehensive backtesting has been performed**, and strategy performance in live trading environments has not been validated
+> - **Not suitable for production use**, as it lacks complete risk management, fault tolerance, and security audits
+> - Cryptocurrency trading involves substantial risk of loss. **Do NOT use this software in live trading environments**
+> - The developers are not liable for any direct, indirect, incidental, or consequential damages resulting from the use or inability to use this software
+> - For testing purposes, always use the OKX sandbox environment for thorough validation
+>
+> **By using this software, you agree to use it solely for educational and research purposes. Any live trading activities are undertaken entirely at your own risk.**

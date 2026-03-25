@@ -3,6 +3,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Go Version](https://img.shields.io/badge/Go-1.26.1-blue)](https://go.dev)
 [![Eino](https://img.shields.io/badge/Eino-v0.8.4-purple)](https://github.com/cloudwego/eino)
+[![Version](https://img.shields.io/badge/Version-v1.0.0-green.svg)](https://github.com/PineappleBond/TradingEino/releases)
 
 [English Version](./README.md)
 
@@ -148,9 +149,18 @@ Web 界面访问地址：`http://localhost:10098`
 | 阶段       | 目标                                 | 状态     |
 |----------|------------------------------------|--------|
 | **阶段 1** | 基础安全（错误处理、限流、单例、优雅关闭）              | ✅ 完成   |
-| **阶段 2** | 分析层（重构子 Agent 为 ChatModelAgent）    | 🔄 进行中 |
-| **阶段 3** | 执行自动化（交易工具、Executor Agent Level 1） | ⏳ 计划中  |
+| **阶段 2** | 分析层（重构子 Agent 为 ChatModelAgent）    | ✅ 完成   |
+| **阶段 3** | 执行自动化（交易工具、Executor Agent Level 1） | ✅ 完成   |
 | **阶段 4** | RAG 记忆（Redis Stack、决策保存/搜索）        | ⏳ 计划中  |
+
+## v1.0.0 功能完成情况
+
+✅ **完整交易闭环已实现**:
+- 定时任务触发 → OKXWatcher → 多 Agent 分析 → OKXWatcher 汇总 → ExecutorAgent 执行
+- 技术分析 Agent (TechnoAgent) - 20+ 指标
+- 情绪分析 Agent (SentimentAnalyst) - 资金费率分析
+- 持仓管理 Agent (PositionManager) - 风险评估
+- 执行 Agent (ExecutorAgent) - Level 1 自主交易执行
 
 ## 关键决策 (ADR)
 
@@ -161,7 +171,7 @@ Web 界面访问地址：`http://localhost:10098`
 | Tool 原子化                      | 每个 Tool 只做一件事                    | ✅ 已批准 |
 | RAG 使用 Redis Stack + m3e-base | 本地 Embedding，无需外部 API            | ✅ 已批准 |
 | 独立风控层                         | 实时监控，可覆盖决策                       | ✅ 已批准 |
-| Executor 从 Level 1 开始         | 仅执行明确指令，逐步建立信任                   | ⏳ 待定  |
+| Executor 从 Level 1 开始         | 仅执行明确指令，逐步建立信任                   | ✅ 已完成 |
 
 ## 安全特性
 
@@ -208,4 +218,13 @@ TradingEino 采用 [Apache License 2.0](LICENSE) 开源许可证。
 
 ## 免责声明
 
-本软件仅供教育用途。加密货币交易存在重大亏损风险。开发者不对因使用本软件造成的任何财务损失负责。在实盘交易前，务必在沙盒环境中充分测试。
+> ⚠️ **重要提示**
+>
+> - **本项目仅供学习交流使用**，旨在展示如何使用 AI 多 Agent 架构构建交易系统
+> - **未经过完整的回溯测试**，策略在实盘环境中的表现未得到验证
+> - **不适用于生产环境**，缺乏完整的风险控制、故障恢复和安全审计
+> - 加密货币交易存在重大亏损风险，**请勿在实盘环境中使用本软件**
+> - 开发者不对因使用或无法使用本软件造成的任何直接、间接、附带或后果性损失负责
+> - 如想测试，请务必在 OKX 沙盒环境中充分验证
+>
+> **使用本软件即表示您同意仅将其用于教育和研究目的。任何实盘交易行为均由用户自行承担风险。**
