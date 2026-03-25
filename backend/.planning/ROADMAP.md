@@ -58,14 +58,14 @@
 5. OKXWatcher orchestrates all 4 SubAgents via DeepAgent coordinator pattern
 6. Each SubAgent has DESCRIPTION.md and SOUL.md documentation files
 
-**Plans:** 2/5 plans executed
+**Plans:** 5/5 plans executed
 
 **Plans:**
 - [x] 02-analysis-layer-multi-agent-01-PLAN.md — TechnoAgent (ChatModelAgent) for K-line + indicators analysis
-- [ ] 02-analysis-layer-multi-agent-02-PLAN.md — FlowAnalyzer (ChatModelAgent) with orderbook and trades tools
-- [ ] 02-analysis-layer-multi-agent-03-PLAN.md — PositionManager (ChatModelAgent) with account balance tool
-- [ ] 02-analysis-layer-multi-agent-04-PLAN.md — OKXWatcher orchestration update with all 4 SubAgents
-- [ ] 02-analysis-layer-multi-agent-05-PLAN.md — Agent documentation presence test (ANAL-06)
+- [x] 02-analysis-layer-multi-agent-02-PLAN.md — FlowAnalyzer (ChatModelAgent) with orderbook and trades tools
+- [x] 02-analysis-layer-multi-agent-03-PLAN.md — PositionManager (ChatModelAgent) with account balance tool
+- [x] 02-analysis-layer-multi-agent-04-PLAN.md — OKXWatcher orchestration update with all 4 SubAgents
+- [x] 02-analysis-layer-multi-agent-05-PLAN.md — Agent documentation presence test (ANAL-06)
 
 ---
 
@@ -139,7 +139,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Safety | 3/3 | Complete | 01-foundation-safety-01, 01-foundation-safety-02, 01-foundation-safety-03 |
-| 2. Analysis Layer — Multi-Agent | 2/5 | In Progress|  |
+| 2. Analysis Layer — Multi-Agent | 5/5 | Complete | 02-01, 02-02, 02-03, 02-04, 02-05 |
 | 3. Execution Automation | 4/4 | Complete | 03-01, 03-02, 03-03, 03-04 |
 | 4. RAG Decision Memory | 0/5 | Not started | - |
 | 5. Risk Management Layer | 0/3 | Not started | - |
@@ -156,11 +156,11 @@
 | FOUND-04 | Phase 1 | Complete |
 | FOUND-05 | Phase 1 | Complete |
 | ANAL-01 | Phase 2 | Complete |
-| ANAL-02 | Phase 2 | Pending |
-| ANAL-03 | Phase 2 | Pending |
-| ANAL-04 | Phase 2 | Pending |
-| ANAL-05 | Phase 2 | Pending |
-| ANAL-06 | Phase 2 | Pending |
+| ANAL-02 | Phase 2 | Complete |
+| ANAL-03 | Phase 2 | Complete |
+| ANAL-04 | Phase 2 | Complete |
+| ANAL-05 | Phase 2 | Complete |
+| ANAL-06 | Phase 2 | Complete |
 | EXEC-01 | Phase 3 | Complete |
 | EXEC-02 | Phase 3 | Complete |
 | EXEC-03 | Phase 3 | Complete |
@@ -207,3 +207,4 @@
 *Roadmap updated: 2026-03-24 - Phase 3 complete (4/4 plans)*
 *Roadmap updated: 2026-03-24 — 根据 03-CONTEXT.md 多 Agent 架构设计调整，新增 Phase 5 风控层*
 *Roadmap updated: 2026-03-25 - Phase 2 plans created (5 plans in 3 waves)*
+*Roadmap updated: 2026-03-25 - Phase 2 complete (5/5 plans)*

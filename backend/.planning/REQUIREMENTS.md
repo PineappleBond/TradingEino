@@ -23,8 +23,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **ANAL-01**: SentimentAnalyst (ChatModelAgent) — 资金费率情绪分析
 - [x] **ANAL-02**: TechnoAgent (ChatModelAgent) — K 线数据 +20+ 技术指标分析
 - [x] **ANAL-03**: FlowAnalyzer (ChatModelAgent) — 订单簿 + 成交明细分析
-- [ ] **ANAL-04**: PositionManager (ChatModelAgent) — 持仓管理 (原 RiskOfficer)
-- [ ] **ANAL-05**: OKXWatcher orchestrates SubAgents via DeepAgent pattern
+- [x] **ANAL-04**: PositionManager (ChatModelAgent) — 持仓管理 (原 RiskOfficer)
+- [x] **ANAL-05**: OKXWatcher orchestrates SubAgents via DeepAgent pattern
 - [x] **ANAL-06**: All SubAgents have DESCRIPTION.md and SOUL.md files
 
 ### Execution Layer
@@ -41,7 +41,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **DATA-01**: okx-get-positions-tool — 查询持仓 + 最大买卖力量
 - [ ] **DATA-02**: okx-get-orders-tool — 查询当前挂单
-- [ ] **DATA-03**: okx-account-balance-tool — 账户余额/保证金率
+- [x] **DATA-03**: okx-account-balance-tool — 账户余额/保证金率
 - [ ] **DATA-04**: okx-liquidation-price-tool — 强平价格查询
 
 ### Data Tools — Market Analysis
@@ -125,7 +125,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ANAL-01 | Phase 2 | Complete |
 | ANAL-02 | Phase 2 | Pending |
 | ANAL-03 | Phase 2 | Complete |
-| ANAL-04 | Phase 2 | Pending |
+| ANAL-04 | Phase 2 | Complete |
 | ANAL-05 | Phase 2 | Pending |
 | ANAL-06 | Phase 2 | Complete |
 | EXEC-01 | Phase 3 | Complete |
@@ -137,7 +137,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXEC-07 | Phase 3 | Complete |
 | DATA-01 | Phase 3 | Complete |
 | DATA-02 | Phase 3 | Pending |
-| DATA-03 | Phase 3 | Pending |
+| DATA-03 | Phase 3 | Complete |
 | DATA-04 | Phase 3 | Pending |
 | MKT-01 | Phase 3 | Complete |
 | MKT-02 | Phase 3 | Complete |
