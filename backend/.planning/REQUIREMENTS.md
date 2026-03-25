@@ -21,11 +21,11 @@ Requirements for initial release. Each maps to roadmap phases.
 目标架构：OKXWatcher (DeepAgent) 协调 4 个分析型 ChatModelAgent
 
 - [x] **ANAL-01**: SentimentAnalyst (ChatModelAgent) — 资金费率情绪分析
-- [ ] **ANAL-02**: TechnoAgent (ChatModelAgent) — K 线数据 +20+ 技术指标分析
+- [x] **ANAL-02**: TechnoAgent (ChatModelAgent) — K 线数据 +20+ 技术指标分析
 - [ ] **ANAL-03**: FlowAnalyzer (ChatModelAgent) — 订单簿 + 成交明细分析
 - [ ] **ANAL-04**: PositionManager (ChatModelAgent) — 持仓管理 (原 RiskOfficer)
 - [ ] **ANAL-05**: OKXWatcher orchestrates SubAgents via DeepAgent pattern
-- [ ] **ANAL-06**: All SubAgents have DESCRIPTION.md and SOUL.md files
+- [x] **ANAL-06**: All SubAgents have DESCRIPTION.md and SOUL.md files
 
 ### Execution Layer
 
