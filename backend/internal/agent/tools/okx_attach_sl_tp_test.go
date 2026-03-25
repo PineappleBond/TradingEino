@@ -39,6 +39,7 @@ func (m *mockTradeClient) PlaceAlgoOrder(req traderequests.PlaceAlgoOrder) (trad
 
 func TestOkxAttachSlTpTool_AttachSlTpReturnsAlgoId(t *testing.T) {
 	// Test 1: Attach SL/TP to existing order returns algoId
+	callCount := 0
 	mockTrade := &mockTradeClient{
 		placeAlgoOrderFunc: func(req traderequests.PlaceAlgoOrder) (traderesponses.PlaceAlgoOrder, error) {
 			// Verify request parameters
@@ -48,22 +49,43 @@ func TestOkxAttachSlTpTool_AttachSlTpReturnsAlgoId(t *testing.T) {
 			if req.OrdType != okex.AlgoOrderConditional {
 				t.Errorf("Expected ordType 'conditional', got '%s'", req.OrdType)
 			}
-			if req.SlTriggerPx != 1800.0 {
-				t.Errorf("Expected slTriggerPx 1800.0, got '%f'", req.SlTriggerPx)
-			}
-			if req.TpTriggerPx != 2200.0 {
-				t.Errorf("Expected tpTriggerPx 2200.0, got '%f'", req.TpTriggerPx)
-			}
 
-			return traderesponses.PlaceAlgoOrder{
-				PlaceAlgoOrders: []*trade.PlaceAlgoOrder{
-					{
-						AlgoID: "algo-123456",
-						SMsg:   "",
-						SCode:  0,
+			callCount++
+			if callCount == 1 {
+				// First call: SL order
+				if req.SlTriggerPx == nil || *req.SlTriggerPx != 1800.0 {
+					t.Errorf("Expected slTriggerPx 1800.0, got '%v'", req.SlTriggerPx)
+				}
+				if req.TpTriggerPx != nil {
+					t.Errorf("Expected tpTriggerPx to be nil for SL order, got '%v'", req.TpTriggerPx)
+				}
+				return traderesponses.PlaceAlgoOrder{
+					PlaceAlgoOrders: []*trade.PlaceAlgoOrder{
+						{
+							AlgoID: "algo-sl-123456",
+							SMsg:   "",
+							SCode:  0,
+						},
 					},
-				},
-			}, nil
+				}, nil
+			} else {
+				// Second call: TP order
+				if req.TpTriggerPx == nil || *req.TpTriggerPx != 2200.0 {
+					t.Errorf("Expected tpTriggerPx 2200.0, got '%v'", req.TpTriggerPx)
+				}
+				if req.SlTriggerPx != nil {
+					t.Errorf("Expected slTriggerPx to be nil for TP order, got '%v'", req.SlTriggerPx)
+				}
+				return traderesponses.PlaceAlgoOrder{
+					PlaceAlgoOrders: []*trade.PlaceAlgoOrder{
+						{
+							AlgoID: "algo-tp-123456",
+							SMsg:   "",
+							SCode:  0,
+						},
+					},
+				}, nil
+			}
 		},
 	}
 
@@ -75,10 +97,13 @@ func TestOkxAttachSlTpTool_AttachSlTpReturnsAlgoId(t *testing.T) {
 	args := map[string]interface{}{
 		"instID":      "ETH-USDT-SWAP",
 		"ordId":       "order-123",
+		"side":        "buy",
+		"posSide":     "long",
 		"slTriggerPx": "1800.0",
 		"slOrderPx":   "1790.0",
 		"tpTriggerPx": "2200.0",
 		"tpOrderPx":   "2210.0",
+		"sz":          "0.1",
 	}
 	argsJSON, _ := json.Marshal(args)
 
@@ -92,8 +117,11 @@ func TestOkxAttachSlTpTool_AttachSlTpReturnsAlgoId(t *testing.T) {
 	}
 
 	// Verify result contains algoId
-	if !strings.Contains(result, "algo-123456") {
-		t.Errorf("Expected result to contain algoId 'algo-123456', got: %s", result)
+	if !strings.Contains(result, "algo-sl-123456") {
+		t.Errorf("Expected result to contain algoId 'algo-sl-123456', got: %s", result)
+	}
+	if !strings.Contains(result, "algo-tp-123456") {
+		t.Errorf("Expected result to contain algoId 'algo-tp-123456', got: %s", result)
 	}
 }
 
@@ -101,10 +129,10 @@ func TestOkxAttachSlTpTool_AttachSlOnly(t *testing.T) {
 	// Test 2: Attach SL-only (no TP) returns algoId
 	mockTrade := &mockTradeClient{
 		placeAlgoOrderFunc: func(req traderequests.PlaceAlgoOrder) (traderesponses.PlaceAlgoOrder, error) {
-			if req.SlTriggerPx <= 0 {
+			if req.SlTriggerPx == nil || *req.SlTriggerPx <= 0 {
 				t.Error("Expected slTriggerPx to be set")
 			}
-			if req.TpTriggerPx > 0 {
+			if req.TpTriggerPx != nil && *req.TpTriggerPx > 0 {
 				t.Error("Expected tpTriggerPx to be empty")
 			}
 
@@ -129,8 +157,11 @@ func TestOkxAttachSlTpTool_AttachSlOnly(t *testing.T) {
 	args := map[string]interface{}{
 		"instID":      "ETH-USDT-SWAP",
 		"ordId":       "order-123",
+		"side":        "buy",
+		"posSide":     "long",
 		"slTriggerPx": "1800.0",
 		"slOrderPx":   "1790.0",
+		"sz":          "0.1",
 	}
 	argsJSON, _ := json.Marshal(args)
 
@@ -148,10 +179,10 @@ func TestOkxAttachSlTpTool_AttachTpOnly(t *testing.T) {
 	// Test 3: Attach TP-only (no SL) returns algoId
 	mockTrade := &mockTradeClient{
 		placeAlgoOrderFunc: func(req traderequests.PlaceAlgoOrder) (traderesponses.PlaceAlgoOrder, error) {
-			if req.TpTriggerPx <= 0 {
+			if req.TpTriggerPx == nil || *req.TpTriggerPx <= 0 {
 				t.Error("Expected tpTriggerPx to be set")
 			}
-			if req.SlTriggerPx > 0 {
+			if req.SlTriggerPx != nil && *req.SlTriggerPx > 0 {
 				t.Error("Expected slTriggerPx to be empty")
 			}
 
@@ -176,8 +207,11 @@ func TestOkxAttachSlTpTool_AttachTpOnly(t *testing.T) {
 	args := map[string]interface{}{
 		"instID":      "ETH-USDT-SWAP",
 		"ordId":       "order-123",
+		"side":        "buy",
+		"posSide":     "long",
 		"tpTriggerPx": "2200.0",
 		"tpOrderPx":   "2210.0",
+		"sz":          "0.1",
 	}
 	argsJSON, _ := json.Marshal(args)
 
@@ -198,8 +232,10 @@ func TestOkxAttachSlTpTool_NeitherSlNorTpReturnsError(t *testing.T) {
 	}
 
 	args := map[string]interface{}{
-		"instID": "ETH-USDT-SWAP",
-		"ordId":  "order-123",
+		"instID":      "ETH-USDT-SWAP",
+		"ordId":       "order-123",
+		"side":        "buy",
+		"posSide":     "long",
 	}
 	argsJSON, _ := json.Marshal(args)
 
@@ -239,6 +275,8 @@ func TestOkxAttachSlTpTool_OkxSCodeNonZeroReturnsError(t *testing.T) {
 	args := map[string]interface{}{
 		"instID":      "ETH-USDT-SWAP",
 		"ordId":       "order-123",
+		"side":        "buy",
+		"posSide":     "long",
 		"slTriggerPx": "1800.0",
 	}
 	argsJSON, _ := json.Marshal(args)

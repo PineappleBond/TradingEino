@@ -41,11 +41,11 @@ func TestOkxPlaceOrderWithSlTpTool_PlaceLimitOrderWithSlTp(t *testing.T) {
 			if req.InstID != "ETH-USDT-SWAP" {
 				t.Errorf("Expected instId 'ETH-USDT-SWAP', got '%s'", req.InstID)
 			}
-			if req.SlTriggerPx != 1800.0 {
-				t.Errorf("Expected slTriggerPx 1800.0, got '%f'", req.SlTriggerPx)
+			if req.SlTriggerPx == nil || *req.SlTriggerPx != 1800.0 {
+				t.Errorf("Expected slTriggerPx 1800.0, got '%v'", req.SlTriggerPx)
 			}
-			if req.TpTriggerPx != 2200.0 {
-				t.Errorf("Expected tpTriggerPx 2200.0, got '%f'", req.TpTriggerPx)
+			if req.TpTriggerPx == nil || *req.TpTriggerPx != 2200.0 {
+				t.Errorf("Expected tpTriggerPx 2200.0, got '%v'", req.TpTriggerPx)
 			}
 
 			return traderesponses.PlaceAlgoOrder{
@@ -92,10 +92,10 @@ func TestOkxPlaceOrderWithSlTpTool_PlaceLimitOrderWithSlTp(t *testing.T) {
 func TestOkxPlaceOrderWithSlTpTool_PlaceMarketOrderWithSlOnly(t *testing.T) {
 	mockTrade := &mockTradeWithPlaceClient{
 		placeAlgoOrderFunc: func(req traderequests.PlaceAlgoOrder) (traderesponses.PlaceAlgoOrder, error) {
-			if req.SlTriggerPx <= 0 {
+			if req.SlTriggerPx == nil || *req.SlTriggerPx <= 0 {
 				t.Error("Expected slTriggerPx to be set")
 			}
-			if req.TpTriggerPx > 0 {
+			if req.TpTriggerPx != nil && *req.TpTriggerPx > 0 {
 				t.Error("Expected tpTriggerPx to be empty")
 			}
 
@@ -140,10 +140,10 @@ func TestOkxPlaceOrderWithSlTpTool_PlaceMarketOrderWithSlOnly(t *testing.T) {
 func TestOkxPlaceOrderWithSlTpTool_PlaceOrderWithTpOnly(t *testing.T) {
 	mockTrade := &mockTradeWithPlaceClient{
 		placeAlgoOrderFunc: func(req traderequests.PlaceAlgoOrder) (traderesponses.PlaceAlgoOrder, error) {
-			if req.TpTriggerPx <= 0 {
+			if req.TpTriggerPx == nil || *req.TpTriggerPx <= 0 {
 				t.Error("Expected tpTriggerPx to be set")
 			}
-			if req.SlTriggerPx > 0 {
+			if req.SlTriggerPx != nil && *req.SlTriggerPx > 0 {
 				t.Error("Expected slTriggerPx to be empty")
 			}
 
