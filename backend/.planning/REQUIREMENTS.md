@@ -126,7 +126,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ANAL-02 | Phase 2 | Pending |
 | ANAL-03 | Phase 2 | Complete |
 | ANAL-04 | Phase 2 | Complete |
-| ANAL-05 | Phase 2 | Pending |
+| ANAL-05 | Phase 2 | Complete |
 | ANAL-06 | Phase 2 | Complete |
 | EXEC-01 | Phase 3 | Complete |
 | EXEC-02 | Phase 3 | Complete |
