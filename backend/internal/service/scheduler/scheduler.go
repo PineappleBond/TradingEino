@@ -120,6 +120,11 @@ func (s *Scheduler) Start() error {
 
 	s.running = true
 
+	// 启动时清理僵尸执行记录（服务重启后遗留的 running 状态记录）
+	if err := s.cleanupZombieExecutions(); err != nil {
+		logger.Error(s.ctx, "Scheduler: failed to cleanup zombie executions", err)
+	}
+
 	// 加载所有启用的任务
 	if err := s.loadTasks(); err != nil {
 		return fmt.Errorf("failed to load tasks: %w", err)
@@ -240,6 +245,31 @@ func (s *Scheduler) addToCron(task *model.CronTask) error {
 // getNextExecutionTime 计算下次执行时间（支持 6 位 cron 表达式）
 func (s *Scheduler) getNextExecutionTime(spec string) (time.Time, error) {
 	return cronutil.GetNextExecutionTime(spec)
+}
+
+// cleanupZombieExecutions 清理僵尸执行记录（服务重启后遗留的 running 状态记录）
+func (s *Scheduler) cleanupZombieExecutions() error {
+	ctx := context.Background()
+
+	// 获取所有 running 状态的执行记录
+	runningExecs, err := s.executionRepo.GetRunningExecutions(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get running executions: %w", err)
+	}
+
+	now := time.Now()
+	for _, exec := range runningExecs {
+		// 标记为失败（原因是服务重启）
+		if err := s.executionRepo.MarkAsFailed(ctx, exec.ID, now, "Service restarted"); err != nil {
+			logger.Error(ctx, "Scheduler: failed to mark zombie execution as failed", err,
+				"execution_id", exec.ID, "task_id", exec.TaskID)
+		} else {
+			logger.Info(ctx, "Scheduler: cleaned up zombie execution",
+				"execution_id", exec.ID, "task_id", exec.TaskID)
+		}
+	}
+
+	return nil
 }
 
 // onTaskTrigger 任务触发时的回调

@@ -251,7 +251,7 @@ func TestOkxAttachSlTpTool_NeitherSlNorTpReturnsError(t *testing.T) {
 }
 
 func TestOkxAttachSlTpTool_OkxSCodeNonZeroReturnsError(t *testing.T) {
-	// Test 5: OKX sCode != 0 returns error with sCode/sMsg details
+	// Test 5: OKX sCode != 0 returns formatted error message
 	mockTrade := &mockTradeClient{
 		placeAlgoOrderFunc: func(req traderequests.PlaceAlgoOrder) (traderesponses.PlaceAlgoOrder, error) {
 			return traderesponses.PlaceAlgoOrder{
@@ -281,18 +281,21 @@ func TestOkxAttachSlTpTool_OkxSCodeNonZeroReturnsError(t *testing.T) {
 	}
 	argsJSON, _ := json.Marshal(args)
 
-	_, err := tool.InvokableRun(context.Background(), string(argsJSON))
-	if err == nil {
-		t.Fatal("Expected error when sCode != 0")
+	result, err := tool.InvokableRun(context.Background(), string(argsJSON))
+	// Tool returns formatted error message with nil error for sCode errors
+	if err != nil {
+		t.Fatalf("Expected nil error for sCode error, got: %v", err)
+	}
+	if result == "" {
+		t.Fatal("Expected error message in result string")
 	}
 
-	// Verify error contains sCode and sMsg
-	errStr := err.Error()
-	if !strings.Contains(errStr, "51002") {
-		t.Errorf("Expected error to contain sCode '51002', got: %s", errStr)
+	// Verify result contains sCode and sMsg
+	if !strings.Contains(result, "51002") {
+		t.Errorf("Expected result to contain sCode '51002', got: %s", result)
 	}
-	if !strings.Contains(errStr, "Order does not exist") {
-		t.Errorf("Expected error to contain sMsg 'Order does not exist', got: %s", errStr)
+	if !strings.Contains(result, "Order does not exist") {
+		t.Errorf("Expected result to contain sMsg 'Order does not exist', got: %s", result)
 	}
 }
 

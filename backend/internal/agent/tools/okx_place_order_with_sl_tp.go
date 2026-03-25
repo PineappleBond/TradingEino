@@ -130,12 +130,14 @@ func (c *OkxPlaceOrderWithSlTpTool) InvokableRun(ctx context.Context, argsJSON s
 		}
 	}
 	if params.SlOrderPx != "" {
-		hasSlOrderPx = true
-		// -1 means market order for OKX
+		// -1 means market order for OKX, should be nil (not sent)
 		if params.SlOrderPx == "-1" {
-			slOrderPx = -1
-		} else if _, err := fmt.Sscanf(params.SlOrderPx, "%f", &slOrderPx); err != nil {
-			return "", fmt.Errorf("invalid slOrderPx format: %w", err)
+			hasSlOrderPx = false // nil means market order
+		} else {
+			hasSlOrderPx = true
+			if _, err := fmt.Sscanf(params.SlOrderPx, "%f", &slOrderPx); err != nil {
+				return "", fmt.Errorf("invalid slOrderPx format: %w", err)
+			}
 		}
 	}
 	if params.TpTriggerPx != "" {
@@ -144,12 +146,14 @@ func (c *OkxPlaceOrderWithSlTpTool) InvokableRun(ctx context.Context, argsJSON s
 		}
 	}
 	if params.TpOrderPx != "" {
-		hasTpOrderPx = true
-		// -1 means market order for OKX
+		// -1 means market order for OKX, should be nil (not sent)
 		if params.TpOrderPx == "-1" {
-			tpOrderPx = -1
-		} else if _, err := fmt.Sscanf(params.TpOrderPx, "%f", &tpOrderPx); err != nil {
-			return "", fmt.Errorf("invalid tpOrderPx format: %w", err)
+			hasTpOrderPx = false // nil means market order
+		} else {
+			hasTpOrderPx = true
+			if _, err := fmt.Sscanf(params.TpOrderPx, "%f", &tpOrderPx); err != nil {
+				return "", fmt.Errorf("invalid tpOrderPx format: %w", err)
+			}
 		}
 	}
 
@@ -182,20 +186,14 @@ func (c *OkxPlaceOrderWithSlTpTool) InvokableRun(ctx context.Context, argsJSON s
 	}
 
 	// 6. Build PlaceAlgoOrder request with conditional order type
-	sizeVal := 0.0
-	if params.Size != "" {
-		if _, err := fmt.Sscanf(params.Size, "%f", &sizeVal); err != nil {
-			return "", fmt.Errorf("invalid size format: %w", err)
-		}
-	}
-
+	// Use params.Size directly as string to preserve decimal precision
 	req := traderequests.PlaceAlgoOrder{
 		InstID:    params.InstID,
 		TdMode:    okex.TradeCrossMode,
 		Side:      side,
 		PosSide:   posSide,
 		OrdType:   okex.AlgoOrderConditional,
-		Sz:        int64(sizeVal),
+		Sz:        params.Size,
 		StopOrder: traderequests.StopOrder{},
 	}
 

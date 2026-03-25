@@ -24,6 +24,8 @@ func NewExecutorAgent(ctx context.Context, svcCtx *svc.ServiceContext) (*Executo
 		tools.NewOkxPlaceOrderTool(svcCtx),
 		tools.NewOkxCancelOrderTool(svcCtx),
 		tools.NewOkxGetOrderTool(svcCtx),
+		tools.NewOkxGetOrderListTool(svcCtx),
+		tools.NewOkxGetAllPositionsTool(svcCtx),
 		tools.NewOkxAttachSlTpTool(svcCtx),
 		tools.NewOkxPlaceOrderWithSlTpTool(svcCtx),
 	}

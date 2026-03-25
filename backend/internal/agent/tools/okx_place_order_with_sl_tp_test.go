@@ -241,17 +241,21 @@ func TestOkxPlaceOrderWithSlTpTool_MainOrderFailsReturnsError(t *testing.T) {
 	}
 	argsJSON, _ := json.Marshal(args)
 
-	_, err := tool.InvokableRun(context.Background(), string(argsJSON))
-	if err == nil {
-		t.Fatal("Expected error when order fails")
+	result, err := tool.InvokableRun(context.Background(), string(argsJSON))
+	// Tool returns formatted error message with nil error for API-level errors
+	if err != nil {
+		t.Fatalf("Expected nil error for API-level error, got: %v", err)
+	}
+	if result == "" {
+		t.Fatal("Expected error message in result string")
 	}
 
-	errStr := err.Error()
-	if !strings.Contains(errStr, "51000") {
-		t.Errorf("Expected error to contain sCode '51000', got: %s", errStr)
+	// Check that result contains error details
+	if !strings.Contains(result, "51000") {
+		t.Errorf("Expected result to contain sCode '51000', got: %s", result)
 	}
-	if !strings.Contains(errStr, "Insufficient balance") {
-		t.Errorf("Expected error to contain sMsg 'Insufficient balance', got: %s", errStr)
+	if !strings.Contains(result, "Insufficient balance") {
+		t.Errorf("Expected result to contain sMsg 'Insufficient balance', got: %s", result)
 	}
 }
 
