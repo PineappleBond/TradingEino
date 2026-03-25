@@ -5,9 +5,12 @@ import (
 	"sync"
 
 	"github.com/PineappleBond/TradingEino/backend/internal/agent/executor_agent"
+	"github.com/PineappleBond/TradingEino/backend/internal/agent/flow_analyzer"
 	"github.com/PineappleBond/TradingEino/backend/internal/agent/okx_watcher"
+	"github.com/PineappleBond/TradingEino/backend/internal/agent/position_manager"
 	"github.com/PineappleBond/TradingEino/backend/internal/agent/risk_officer"
 	"github.com/PineappleBond/TradingEino/backend/internal/agent/sentiment_analyst"
+	"github.com/PineappleBond/TradingEino/backend/internal/agent/techno_agent"
 	"github.com/PineappleBond/TradingEino/backend/internal/svc"
 	"github.com/cloudwego/eino/adk"
 )
@@ -18,6 +21,9 @@ type AgentsModel struct {
 	RiskOfficer      adk.Agent
 	SentimentAnalyst adk.Agent
 	Executor         adk.Agent
+	TechnoAgent      adk.Agent
+	FlowAnalyzer     adk.Agent
+	PositionManager  adk.Agent
 	mux              sync.Mutex
 	ctx              context.Context
 	cancel           context.CancelFunc
@@ -41,8 +47,32 @@ func InitAgents(ctx context.Context, svcCtx *svc.ServiceContext) error {
 		// Derive child context from parent ctx (not context.Background())
 		ctx, cancel := context.WithCancel(ctx)
 
-		// Initialize RiskOfficer agent (ChatModelAgent)
+		// Initialize RiskOfficer agent (ChatModelAgent) - kept for backward compatibility
 		riskOfficerAgent, err := risk_officer.NewRiskOfficerAgent(ctx, svcCtx)
+		if err != nil {
+			initErr = err
+			cancel()
+			return
+		}
+
+		// Initialize TechnoAgent (ChatModelAgent)
+		technoAgent, err := techno_agent.NewTechnoAgent(ctx, svcCtx)
+		if err != nil {
+			initErr = err
+			cancel()
+			return
+		}
+
+		// Initialize FlowAnalyzer (ChatModelAgent)
+		flowAnalyzer, err := flow_analyzer.NewFlowAnalyzerAgent(ctx, svcCtx)
+		if err != nil {
+			initErr = err
+			cancel()
+			return
+		}
+
+		// Initialize PositionManager (ChatModelAgent)
+		positionManager, err := position_manager.NewPositionManagerAgent(ctx, svcCtx)
 		if err != nil {
 			initErr = err
 			cancel()
@@ -57,8 +87,12 @@ func InitAgents(ctx context.Context, svcCtx *svc.ServiceContext) error {
 			return
 		}
 
-		// Initialize OKXWatcher agent (DeepAgent orchestrator)
-		okxWatcherAgent, err := okx_watcher.NewOkxWatcherAgent(ctx, svcCtx, riskOfficerAgent.Agent(), sentimentAnalystAgent.Agent())
+		// Initialize OKXWatcher agent (DeepAgent orchestrator) with all 4 SubAgents
+		okxWatcherAgent, err := okx_watcher.NewOkxWatcherAgent(ctx, svcCtx,
+			technoAgent.Agent(),
+			flowAnalyzer.Agent(),
+			positionManager.Agent(),
+			sentimentAnalystAgent.Agent())
 		if err != nil {
 			initErr = err
 			cancel()
@@ -79,6 +113,9 @@ func InitAgents(ctx context.Context, svcCtx *svc.ServiceContext) error {
 			RiskOfficer:      riskOfficerAgent.Agent(),
 			SentimentAnalyst: sentimentAnalystAgent.Agent(),
 			Executor:         executorAgent.Agent(),
+			TechnoAgent:      technoAgent.Agent(),
+			FlowAnalyzer:     flowAnalyzer.Agent(),
+			PositionManager:  positionManager.Agent(),
 			mux:              sync.Mutex{},
 			ctx:              ctx,
 			cancel:           cancel,
